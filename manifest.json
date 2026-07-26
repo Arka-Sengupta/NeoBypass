@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "NeoExamShield",
+  "name": "NeoBypass",
   "version": "1.5.2",
   "description": "To prevent malpractice, identifies and blocks third-party browser extensions during tests on the Iamneo portal.",
   "background": {
@@ -51,9 +51,9 @@
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "images/icon16.png",
-      "48": "images/icon48.png",
-      "128": "images/icon128.png"
+      "16": "images/NB16.png",
+      "48": "images/NB48.png",
+      "128": "images/NB128.png"
     }
   },
   "content_scripts": [
@@ -157,9 +157,9 @@
     }
   },
   "icons": {
-    "16": "images/icon16.png",
-    "48": "images/icon48.png",
-    "128": "images/icon128.png"
+    "16": "images/NB16.png",
+    "48": "images/NB48.png",
+    "128": "images/NB128.png"
   },
   "version_name": "Release Version"
 }

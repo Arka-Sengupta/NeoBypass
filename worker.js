@@ -218,397 +218,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
 });
 
-// Version checking functions
-async function checkForUpdate() {
-    try {
-        const response = await fetch('https://api.github.com/repos/Max-Eee/NeoPass/releases/latest');
-        const data = await response.json();
-        const latestVersion = data.tag_name.replace('v', '');
-        const currentVersion = chrome.runtime.getManifest().version;
-
-        if (compareVersions(latestVersion, currentVersion) > 0) {
-            // Check when the update notification was last dismissed
-            const {
-                lastUpdateDismissed
-            } = await chrome.storage.local.get(['lastUpdateDismissed']);
-            const currentTime = Date.now();
-
-            // Show notification if never dismissed or if 5 hours (18000000 ms) have passed
-            const showNotificationTimeout = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
-
-            if (!lastUpdateDismissed || (currentTime - lastUpdateDismissed) > showNotificationTimeout) {
-                // Get the active tab but check if it's a valid tab for script injection
-                chrome.tabs.query({
-                    active: true,
-                    currentWindow: true
-                }, function(tabs) {
-                    if (tabs[0] && tabs[0].url &&
-                        !tabs[0].url.startsWith('chrome://') &&
-                        !tabs[0].url.startsWith('chrome-extension://') &&
-                        !tabs[0].url.startsWith('about:') &&
-                        !tabs[0].url.startsWith('edge://') &&
-                        !tabs[0].url.startsWith('brave://')) {
-
-                        showUpdateToast(tabs[0].id,
-                            `Update Available: v${latestVersion}\nSome features may not work. Please update your extension.`,
-                            latestVersion
-                        );
-                    } else {
-                        // Store the update info to show later when on a valid page
-                        chrome.storage.local.set({
-                            'pendingUpdateNotification': true,
-                            'pendingUpdateVersion': latestVersion
-                        });
-                        console.log('Update available but current tab is not injectable. Will show notification later.');
-                    }
-                });
-            }
-        }
-    } catch (error) {
-        console.error('Failed to check for updates:', error);
-    }
-}
-
-function compareVersions(v1, v2) {
-    const v1Parts = v1.split('.').map(Number);
-    const v2Parts = v2.split('.').map(Number);
-
-    for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
-        const v1Part = v1Parts[i] || 0;
-        const v2Part = v2Parts[i] || 0;
-        if (v1Part > v2Part) return 1;
-        if (v1Part < v2Part) return -1;
-    }
-    return 0;
-}
-
-function showUpdateToast(tabId, message, latestVersion) {
-    // First check if the tab is valid for script injection
-    chrome.tabs.get(tabId, async (tab) => {
-        // Handle potential error if tab no longer exists
-        if (chrome.runtime.lastError) {
-            console.error(chrome.runtime.lastError.message);
-            return;
-        }
-
-        // Verify tab is a valid target for script injection
-        if (!tab.url ||
-            tab.url.startsWith('chrome://') ||
-            tab.url.startsWith('chrome-extension://') ||
-            tab.url.startsWith('about:') ||
-            tab.url.startsWith('edge://') ||
-            tab.url.startsWith('brave://')) {
-
-            console.log('Cannot inject script into this tab type');
-            return;
-        }
-
-        // Proceed with script injection for valid tabs
-        try {
-            // Remove any existing toasts first
-            await removeExistingToast(tabId);
-            
-            // Use a promise wrapper to handle errors silently
-            const executeScriptPromise = async () => {
-                try {
-                    await chrome.scripting.executeScript({
-                        target: {
-                            tabId: tabId
-                        },
-                        func: function(msg, version) {
-                            // Create gradient background container
-                            const gradientContainer = document.createElement('div');
-                            gradientContainer.style.cssText = `
-                                position: fixed;
-                                top: 20px;
-                                right: 20px;
-                                padding: 1px;
-                                background: linear-gradient(to right, #3b82f6, #8b5cf6, #ec4899);
-                                border-radius: 8px;
-                                z-index: 10000;
-                                cursor: pointer;
-                                animation: fadeIn 0.3s ease-in;
-                            `;
-
-                            // Add a unique ID to identify the toast
-                            gradientContainer.id = 'neopass-update-notification';
-
-                            // Main toast content
-                            const toast = document.createElement('div');
-                            toast.style.cssText = `
-                                position: relative;
-                                background-color: rgba(0, 0, 0, 0.8);
-                                backdrop-filter: blur(8px);
-                                color: white;
-                                padding: 16px;
-                                border-radius: 7px;
-                                font-family: monospace;
-                                min-width: 300px;
-                                border: 1px solid rgba(255, 255, 255, 0.1);
-                                transition: background-color 0.2s;
-                            `;
-
-                            // Header container with NeoPass title and close button
-                            const header = document.createElement('div');
-                            header.style.cssText = `
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: center;
-                                margin-bottom: 12px;
-                                padding-bottom: 8px;
-                                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                            `;
-
-                            // NeoPass title
-                            const title = document.createElement('div');
-                            title.innerHTML = 'NeoPass Extension';
-                            title.style.cssText = `
-                                font-size: 16px;
-                                font-weight: bold;
-                                background: linear-gradient(to right, #3b82f6, #8b5cf6, #ec4899);
-                                -webkit-background-clip: text;
-                                background-clip: text;
-                                color: transparent;
-                            `;
-
-                            const closeBtn = document.createElement('span');
-                            closeBtn.innerHTML = '&times;';
-                            closeBtn.style.cssText = `
-                                cursor: pointer;
-                                font-size: 20px;
-                                color: rgba(255, 255, 255, 0.8);
-                                transition: color 0.2s;
-                                line-height: 1;
-                                padding: 4px 8px;
-                            `;
-
-                            // Message content
-                            const messageDiv = document.createElement('div');
-                            messageDiv.innerHTML = msg.replace('\n', '<br>');
-                            messageDiv.style.marginBottom = '12px';
-
-                            // Links container
-                            const linksContainer = document.createElement('div');
-                            linksContainer.style.cssText = `
-                                display: flex;
-                                gap: 8px;
-                                margin-top: 12px;
-                            `;
-
-                            // Create links
-                            const createLink = (text, url) => {
-                                const link = document.createElement('a');
-                                link.href = url;
-                                link.innerHTML = text;
-                                link.style.cssText = `
-                                    background: rgba(255, 255, 255, 0.1);
-                                    color: white;
-                                    text-decoration: none;
-                                    padding: 6px 12px;
-                                    border-radius: 4px;
-                                    font-size: 12px;
-                                    transition: all 0.2s;
-                                    flex: 1;
-                                    text-align: center;
-                                    border: 1px solid rgba(255, 255, 255, 0.1);
-                                `;
-                                link.onmouseover = (e) => {
-                                    link.style.background = 'rgba(255, 255, 255, 0.2)';
-                                };
-                                link.onmouseout = (e) => {
-                                    link.style.background = 'rgba(255, 255, 255, 0.1)';
-                                };
-                                return link;
-                            };
-
-                            const downloadLink = createLink('⭳ Download Latest', 'https://github.com/Max-Eee/NeoPass/archive/refs/heads/main.zip');
-                            const websiteLink = createLink('Website', 'https://freeneopass.vercel.app');
-
-                            // Add hover effects
-                            gradientContainer.onmouseover = () => {
-                                toast.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-                            };
-                            gradientContainer.onmouseout = () => {
-                                toast.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-                            };
-
-                            closeBtn.onmouseover = (e) => {
-                                closeBtn.style.color = 'white';
-                            };
-                            closeBtn.onmouseout = (e) => {
-                                closeBtn.style.color = 'rgba(255, 255, 255, 0.8)';
-                            };
-
-                            // Click handlers
-                            gradientContainer.onclick = (e) => {
-                                if (e.target === gradientContainer || e.target === toast || e.target === messageDiv) {
-                                    window.open('https://github.com/Max-Eee/NeoPass/releases/latest');
-                                }
-                            };
-
-                            // Modified close button handler to store dismissal time
-                            closeBtn.onclick = (e) => {
-                                e.stopPropagation(); // Prevent triggering the container's click
-                                gradientContainer.style.animation = 'fadeOut 0.3s ease-out';
-                                setTimeout(() => gradientContainer.remove(), 280);
-
-                                // Store the dismissal time
-                                chrome.runtime.sendMessage({
-                                    action: "updateDismissed",
-                                    version: version,
-                                    timestamp: Date.now()
-                                });
-                            };
-
-                            // Listen for dismissal message from other tabs
-                            chrome.runtime.onMessage.addListener((message) => {
-                                if (message.action === "removeUpdateNotification") {
-                                    if (gradientContainer && gradientContainer.parentElement) {
-                                        gradientContainer.style.animation = 'fadeOut 0.3s ease-out';
-                                        setTimeout(() => gradientContainer.remove(), 280);
-                                    }
-                                }
-                            });
-
-                            // Add animation styles
-                            const style = document.createElement('style');
-                            style.textContent = `
-                                @keyframes fadeIn {
-                                    from { opacity: 0; transform: translateY(-20px); }
-                                    to { opacity: 1; transform: translateY(0); }
-                                }
-                                @keyframes fadeOut {
-                                    from { opacity: 1; transform: translateY(0); }
-                                    to { opacity: 0; transform: translateY(-20px); }
-                                }
-                            `;
-                            document.head.appendChild(style);
-
-                            // Assemble and append
-                            header.appendChild(title);
-                            header.appendChild(closeBtn);
-                            linksContainer.appendChild(downloadLink);
-                            linksContainer.appendChild(websiteLink);
-
-                            toast.appendChild(header);
-                            toast.appendChild(messageDiv);
-                            toast.appendChild(linksContainer);
-
-                            gradientContainer.appendChild(toast);
-
-                            // Remove existing update toast if any
-                            const existingToast = document.getElementById('neopass-update-notification');
-                            if (existingToast) {
-                                existingToast.remove();
-                            }
-
-                            document.body.appendChild(gradientContainer);
-                        },
-                        args: [message, latestVersion]
-                    });
-                } catch (err) {
-                    // Silently handle the error and store notification for showing later
-                    // without logging to console
-                    chrome.storage.local.set({
-                        'pendingUpdateNotification': true,
-                        'pendingUpdateVersion': latestVersion
-                    });
-                }
-            };
-
-            // Execute the script with silent error handling
-            executeScriptPromise();
-
-        } catch (error) {
-            // Only log truly unexpected errors
-            console.error('Error in showUpdateToast:', error);
-        }
-    });
-}
-
-// Add listener for tab updates to show pending notifications
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    // Only check when page is fully loaded
-    if (changeInfo.status === 'complete' && tab.url &&
-        !tab.url.startsWith('chrome://') &&
-        !tab.url.startsWith('chrome-extension://') &&
-        !tab.url.startsWith('about:') &&
-        !tab.url.startsWith('edge://') &&
-        !tab.url.startsWith('brave://')) {
-
-        // Check for pending notifications
-        chrome.storage.local.get(['pendingUpdateNotification', 'pendingUpdateVersion'], function(data) {
-            if (data.pendingUpdateNotification) {
-                // Clear the pending flag
-                chrome.storage.local.set({
-                    'pendingUpdateNotification': false
-                });
-
-                // Show the notification
-                showUpdateToast(tab.id,
-                    `Update Available: v${data.pendingUpdateVersion}\nSome features may not work. Please update your extension.`,
-                    data.pendingUpdateVersion
-                );
-            }
-        });
-
-        // Standard update check logic (shows on every tab until dismissed)
-        checkForUpdate();
-    }
-});
-
-// Set up an alarm for update checking
-function setupUpdateAlarm() {
-    chrome.alarms.get('updateCheck', (alarm) => {
-        // If alarm doesn't exist, create it
-        if (!alarm) {
-            chrome.alarms.create('updateCheck', {
-                // Check twice per day
-                periodInMinutes: 12 * 60
-            });
-        }
-    });
-}
-
-// Listen for alarm
-chrome.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === 'updateCheck') {
-        checkForUpdate();
-    }
-});
-
-// Set up alarm when extension starts
-chrome.runtime.onStartup.addListener(setupUpdateAlarm);
-
-// Also set up alarm on install
-chrome.runtime.onInstalled.addListener((details) => {
-    setupUpdateAlarm();
-    // Also do an immediate check on install/update
-    if (details.reason === 'update' || details.reason === 'install') {
-        checkForUpdate();
-    }
-});
-
-// Additional listener for update dismissal messages from content script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === "updateDismissed") {
-        chrome.storage.local.set({
-            lastUpdateDismissed: message.timestamp,
-            lastUpdateVersion: message.version
-        });
-        
-        // Broadcast to all tabs to remove the notification
-        chrome.tabs.query({}, (tabs) => {
-            tabs.forEach(tab => {
-                chrome.tabs.sendMessage(tab.id, {
-                    action: "removeUpdateNotification"
-                }).catch(() => {
-                    // Ignore errors for tabs that can't receive messages
-                });
-            });
-        });
-    }
-});
+// // Update check logic removed);
 
 
 
@@ -1305,11 +915,11 @@ async function getCustomAPIConfig() {
             'customModelName'
         ], (result) => {
             resolve({
-                useCustomAPI: result.useCustomAPI || false,
-                aiProvider: result.aiProvider || 'openai',
+                useCustomAPI: true, // Always enabled
+                aiProvider: 'google', // Always google
                 customEndpoint: result.customEndpoint || '',
                 apiKey: result.customAPIKey || '',
-                modelName: result.customModelName || ''
+                modelName: result.customModelName || 'gemini-2.5-flash'
             });
         });
     });
@@ -1318,6 +928,14 @@ async function getCustomAPIConfig() {
 // Function to query custom AI API
 async function queryCustomAPI(text, isMCQ, isMultipleChoice, config) {
     const { aiProvider, customEndpoint, apiKey, modelName } = config;
+    
+    if (!apiKey || !apiKey.startsWith('AQ.')) {
+        return {
+            error: 'Gemini API Key missing or invalid',
+            errorType: 'config',
+            detailedInfo: 'Please configure a valid Gemini API Key (starts with AQ.) in the extension popup.'
+        };
+    }
     
     // Construct the prompt based on query type
     let prompt = text;
@@ -1362,7 +980,14 @@ async function queryCustomAPI(text, isMCQ, isMultipleChoice, config) {
                 break;
                 
             case 'google':
-                const googleModel = modelName || 'gemini-2.5-flash';
+                let googleModel = modelName || 'gemini-flash-latest';
+                if (googleModel.startsWith('models/')) {
+                    googleModel = googleModel.replace('models/', '');
+                }
+                // Force a working model since gemini-2.5-flash is no longer available to new users
+                if (googleModel === 'gemini-2.5-flash') {
+                    googleModel = 'gemini-flash-latest';
+                }
                 apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${googleModel}:generateContent?key=${apiKey}`;
                 headers = {
                     'Content-Type': 'application/json'
@@ -2243,19 +1868,35 @@ async function showToast(tabId, message, isError = false, detailedInfo = '') {
             toast.style.bottom = '20px';
             toast.style.left = '50%';
             toast.style.transform = 'translateX(-50%)';
-            toast.style.backgroundColor = isError ? 'rgba(40, 10, 10, 0.95)' : 'rgba(15, 15, 20, 0.95)';
-            toast.style.color = isError ? '#ff6b6b' : '#f8f9fa';
-            toast.style.padding = '14px 16px';
-            toast.style.borderRadius = '8px';
             toast.style.zIndex = '999999';
             toast.style.opacity = opacity;
             toast.style.transition = 'all 0.3s ease';
             toast.style.maxWidth = '320px';
-            toast.style.fontFamily = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-            toast.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-            toast.style.border = isError ? '1px solid rgba(255, 107, 107, 0.2)' : '1px solid rgba(255, 255, 255, 0.1)';
-            toast.style.backdropFilter = 'blur(10px)';
-            toast.style.WebkitBackdropFilter = 'blur(10px)';
+
+            if (isError) {
+                toast.style.backgroundColor = '#c0c0c0';
+                toast.style.color = 'black';
+                toast.style.padding = '8px';
+                toast.style.borderRadius = '0';
+                toast.style.fontFamily = "'MS Sans Serif', Tahoma, sans-serif";
+                toast.style.boxShadow = '2px 2px 5px rgba(0, 0, 0, 0.5)';
+                toast.style.borderTop = '2px solid #ffffff';
+                toast.style.borderLeft = '2px solid #ffffff';
+                toast.style.borderRight = '2px solid #808080';
+                toast.style.borderBottom = '2px solid #808080';
+                toast.style.backdropFilter = 'none';
+                toast.style.WebkitBackdropFilter = 'none';
+            } else {
+                toast.style.backgroundColor = 'rgba(15, 15, 20, 0.95)';
+                toast.style.color = '#f8f9fa';
+                toast.style.padding = '14px 16px';
+                toast.style.borderRadius = '8px';
+                toast.style.fontFamily = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                toast.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                toast.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                toast.style.backdropFilter = 'blur(10px)';
+                toast.style.WebkitBackdropFilter = 'blur(10px)';
+            }
             
             // Create header container
             const headerContainer = document.createElement('div');
@@ -2307,7 +1948,7 @@ async function showToast(tabId, message, isError = false, detailedInfo = '') {
             infoBtn.title = 'Show more information';
             infoBtn.style.background = 'none';
             infoBtn.style.border = 'none';
-            infoBtn.style.color = isError ? 'rgba(255, 107, 107, 0.8)' : 'rgba(255, 255, 255, 0.8)';
+            infoBtn.style.color = isError ? 'black' : 'rgba(255, 255, 255, 0.8)';
             infoBtn.style.cursor = 'pointer';
             infoBtn.style.padding = '2px';
             infoBtn.style.marginRight = '6px';
@@ -2321,7 +1962,7 @@ async function showToast(tabId, message, isError = false, detailedInfo = '') {
             closeBtn.title = 'Close';
             closeBtn.style.background = 'none';
             closeBtn.style.border = 'none';
-            closeBtn.style.color = isError ? 'rgba(255, 107, 107, 0.8)' : 'rgba(255, 255, 255, 0.8)';
+            closeBtn.style.color = isError ? 'black' : 'rgba(255, 255, 255, 0.8)';
             closeBtn.style.cursor = 'pointer';
             closeBtn.style.padding = '2px';
             closeBtn.style.borderRadius = '4px';
@@ -3213,19 +2854,35 @@ async function showNPTELToast(tabId, message, isError = false, detailedInfo = ''
             toast.style.bottom = '20px';
             toast.style.left = '50%';
             toast.style.transform = 'translateX(-50%)';
-            toast.style.backgroundColor = isError ? 'rgba(40, 10, 10, 0.95)' : 'rgba(15, 15, 20, 0.95)';
-            toast.style.color = isError ? '#ff6b6b' : '#f8f9fa';
-            toast.style.padding = '14px 16px';
-            toast.style.borderRadius = '8px';
             toast.style.zIndex = '999999';
             toast.style.opacity = opacity;
             toast.style.transition = 'all 0.3s ease';
             toast.style.maxWidth = '320px';
-            toast.style.fontFamily = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-            toast.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-            toast.style.border = isError ? '1px solid rgba(255, 107, 107, 0.2)' : '1px solid rgba(255, 255, 255, 0.1)';
-            toast.style.backdropFilter = 'blur(10px)';
-            toast.style.WebkitBackdropFilter = 'blur(10px)';
+
+            if (isError) {
+                toast.style.backgroundColor = '#c0c0c0';
+                toast.style.color = 'black';
+                toast.style.padding = '8px';
+                toast.style.borderRadius = '0';
+                toast.style.fontFamily = "'MS Sans Serif', Tahoma, sans-serif";
+                toast.style.boxShadow = '2px 2px 5px rgba(0, 0, 0, 0.5)';
+                toast.style.borderTop = '2px solid #ffffff';
+                toast.style.borderLeft = '2px solid #ffffff';
+                toast.style.borderRight = '2px solid #808080';
+                toast.style.borderBottom = '2px solid #808080';
+                toast.style.backdropFilter = 'none';
+                toast.style.WebkitBackdropFilter = 'none';
+            } else {
+                toast.style.backgroundColor = 'rgba(15, 15, 20, 0.95)';
+                toast.style.color = '#f8f9fa';
+                toast.style.padding = '14px 16px';
+                toast.style.borderRadius = '8px';
+                toast.style.fontFamily = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                toast.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                toast.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                toast.style.backdropFilter = 'blur(10px)';
+                toast.style.WebkitBackdropFilter = 'blur(10px)';
+            }
             
             // Create header container
             const headerContainer = document.createElement('div');
@@ -3277,7 +2934,7 @@ async function showNPTELToast(tabId, message, isError = false, detailedInfo = ''
             infoBtn.title = 'Show more information';
             infoBtn.style.background = 'none';
             infoBtn.style.border = 'none';
-            infoBtn.style.color = isError ? 'rgba(255, 107, 107, 0.8)' : 'rgba(255, 255, 255, 0.8)';
+            infoBtn.style.color = isError ? 'black' : 'rgba(255, 255, 255, 0.8)';
             infoBtn.style.cursor = 'pointer';
             infoBtn.style.padding = '2px';
             infoBtn.style.marginRight = '6px';
@@ -3291,7 +2948,7 @@ async function showNPTELToast(tabId, message, isError = false, detailedInfo = ''
             closeBtn.title = 'Close';
             closeBtn.style.background = 'none';
             closeBtn.style.border = 'none';
-            closeBtn.style.color = isError ? 'rgba(255, 107, 107, 0.8)' : 'rgba(255, 255, 255, 0.8)';
+            closeBtn.style.color = isError ? 'black' : 'rgba(255, 255, 255, 0.8)';
             closeBtn.style.cursor = 'pointer';
             closeBtn.style.padding = '2px';
             closeBtn.style.borderRadius = '4px';

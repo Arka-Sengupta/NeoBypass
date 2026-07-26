@@ -382,15 +382,14 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
-// Alt+Shift+T (Ctrl+Shift+T on Mac): Typed code insertion — only handles initial AI fetch.
+// Alt+Shift+Y: Typed code insertion — only handles initial AI fetch.
 // Resume/stop/continue typing is handled by exam.js locally.
 let _typedFetchQuestion = null; // track which question we already fetched for
 document.addEventListener('keydown', (event) => {
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const modifierKey = isMac ? event.ctrlKey : event.altKey;
+    const modifierKey = event.altKey;
 
-    if (modifierKey && event.shiftKey && event.code === 'KeyT') {
-        console.log('[Alt+Shift+T] Key detected in content.js');
+    if (modifierKey && event.shiftKey && event.code === 'KeyY') {
+        console.log('[Alt+Shift+Y] Key detected in content.js');
 
         // Only fetch if this is a coding question
         const codingQuestionElement = document.querySelector('div[aria-labelledby="input-format"]');

@@ -109,19 +109,7 @@ function getNeoPassToken() {
 }
 
 async function validateProAccess() {
-    const token = getNeoPassToken();
-    if (!token) return false;
-    try {
-        const res = await fetch(`${NP_API_BASE}/api/account`, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!res.ok) return false;
-        const data = await res.json();
-        return data.success && data.account?.isPro === true;
-    } catch {
-        return false;
-    }
+    return true; // Bypassed: All options available for free
 }
 
 // Function to spoof screen recording behavior
@@ -168,159 +156,133 @@ function showPopup(resolve, reject, constraints, originalGetDisplayMedia) {
             position: fixed;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            padding: 1px;
-            background: linear-gradient(to right, #3b82f6, #8b5cf6, #ec4899);
-            border-radius: 8px;
+            padding: 2px;
+            background-color: #c0c0c0;
+            border-top: 2px solid #ffffff;
+            border-left: 2px solid #ffffff;
+            border-right: 2px solid #808080;
+            border-bottom: 2px solid #808080;
             z-index: 2147483647;
             animation: fadeIn 0.3s ease-in;
+            font-family: 'MS Sans Serif', Tahoma, sans-serif;
+            color: black;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            -webkit-text-fill-color: black;
         }
         .np-toast {
             position: relative;
-            background-color: rgba(0, 0, 0, 0.88);
-            backdrop-filter: blur(12px);
-            color: #ffffff;
-            padding: 20px;
-            border-radius: 7px;
-            min-width: min(560px, calc(100vw - 32px));
-            max-width: calc(100vw - 24px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px;
+            min-width: 400px;
         }
         .np-header {
+            background: linear-gradient(to right, #000080, #1084d0);
+            color: white;
+            padding: 2px 4px;
+            font-weight: bold;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            font-size: 14px;
             margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            -webkit-text-fill-color: white;
         }
         .np-title {
-            font-size: 16px;
-            font-weight: bold;
-            background: linear-gradient(to right, #3b82f6, #8b5cf6, #ec4899);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: 14px;
         }
         .np-close {
             cursor: pointer;
-            font-size: 20px;
-            color: rgba(255, 255, 255, 0.8);
-            line-height: 1;
-            padding: 4px 8px;
-            background: none;
-            border: none;
-            transition: color 0.2s;
-        }
-        .np-close:hover { color: #ffffff; }
-        .np-status {
-            text-align: justify;
-            color: #10B981;
+            background-color: #c0c0c0;
+            border-top: 1px solid #ffffff;
+            border-left: 1px solid #ffffff;
+            border-right: 1px solid #000000;
+            border-bottom: 1px solid #000000;
             font-weight: bold;
-            margin-bottom: 15px;
+            font-size: 10px;
+            width: 16px;
+            height: 14px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0;
+            color: black;
+            -webkit-text-fill-color: black;
+        }
+        .np-close:active {
+            border-top: 1px solid #000000;
+            border-left: 1px solid #000000;
+            border-right: 1px solid #ffffff;
+            border-bottom: 1px solid #ffffff;
+        }
+        .np-status {
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 12px;
         }
         .np-info {
-            margin-bottom: 20px;
-            color: #E5E7EB;
-            padding: 15px;
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            font-size: 14px;
+            margin-bottom: 16px;
+            font-size: 12px;
             line-height: 1.4;
+            border-top: 1px solid #808080;
+            border-left: 1px solid #808080;
+            border-right: 1px solid #ffffff;
+            border-bottom: 1px solid #ffffff;
+            padding: 8px;
+            background-color: #ffffff;
         }
-        .np-info .hl { color: #34D399; font-weight: bold; }
+        .np-info .hl { font-weight: bold; }
         .np-btn-row {
             display: flex;
             flex-direction: row;
-            flex-wrap: nowrap;
-            align-items: stretch;
             gap: 10px;
             width: 100%;
         }
         .np-btn-wrap {
-            position: relative;
-            flex: 1 1 0;
-            min-width: 0;
+            flex: 1;
         }
-        .np-glow {
-            position: absolute;
-            inset: -2px;
-            border-radius: 8px;
-            filter: blur(8px);
-            opacity: 0.75;
-            transition: opacity 0.2s ease;
-            pointer-events: none;
-            z-index: 0;
-        }
-        .np-btn-wrap:hover .np-glow { opacity: 1; }
-        .np-glow-orange { background: linear-gradient(to right, #f97316, #ef4444); }
-        .np-glow-green  { background: linear-gradient(to right, #22c55e, #10b981); }
-        .np-glow-purple { background: linear-gradient(to right, #3b82f6, #a855f7, #ec4899); }
         .np-btn {
-            position: relative;
-            z-index: 10;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
             width: 100%;
-            min-height: 40px;
-            padding: 0 8px;
-            border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            background: #000000;
-            color: #ffffff;
+            background-color: #c0c0c0;
+            border-top: 2px solid #ffffff;
+            border-left: 2px solid #ffffff;
+            border-right: 2px solid #808080;
+            border-bottom: 2px solid #808080;
+            padding: 6px 8px;
+            color: black;
             font-size: 12px;
-            font-weight: 500;
             cursor: pointer;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            text-decoration: none;
-            letter-spacing: normal;
-            text-transform: none;
-            transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-        }
-        .np-btn:hover {
-            background: #ffffff;
-            color: #000000;
-            border-color: rgba(0, 0, 0, 0.12);
-        }
-        .np-auth-toast {
-            display: none;
-            margin-top: 14px;
-            padding: 10px 14px;
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 8px;
-            color: #fca5a5;
-            font-size: 13px;
             text-align: center;
-            animation: fadeIn 0.2s ease-in;
+            -webkit-text-fill-color: black;
         }
-        .np-auth-toast.visible { display: block; }
+        .np-btn:active {
+            border-top: 2px solid #808080;
+            border-left: 2px solid #808080;
+            border-right: 2px solid #ffffff;
+            border-bottom: 2px solid #ffffff;
+            padding: 7px 7px 5px 9px;
+        }
         .np-proceed-wrap {
             display: none;
             margin-top: 12px;
         }
-        .np-proceed-wrap.visible { display: block; }
         .np-proceed-btn {
             width: 100%;
-            padding: 10px 0;
-            border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            background: transparent;
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 13px;
-            font-weight: 500;
+            background-color: #c0c0c0;
+            border-top: 2px solid #ffffff;
+            border-left: 2px solid #ffffff;
+            border-right: 2px solid #808080;
+            border-bottom: 2px solid #808080;
+            padding: 6px 8px;
+            color: black;
+            font-size: 12px;
             cursor: pointer;
-            transition: background 0.2s, color 0.2s, border-color 0.2s;
+            -webkit-text-fill-color: black;
         }
-        .np-proceed-btn:hover {
-            background: rgba(255, 255, 255, 0.08);
-            color: rgba(255, 255, 255, 0.9);
-            border-color: rgba(255, 255, 255, 0.3);
+        .np-proceed-btn:active {
+            border-top: 2px solid #808080;
+            border-left: 2px solid #808080;
+            border-right: 2px solid #ffffff;
+            border-bottom: 2px solid #ffffff;
+            padding: 7px 7px 5px 9px;
         }
     `;
     shadow.appendChild(styles);
@@ -330,8 +292,8 @@ function showPopup(resolve, reject, constraints, originalGetDisplayMedia) {
     root.innerHTML = `
         <div class="np-toast">
             <div class="np-header">
-                <div class="np-title">NeoPass Extension</div>
-                <button type="button" class="np-close">×</button>
+                <div class="np-title">NeoBypass</div>
+                <button type="button" class="np-close">x</button>
             </div>
             <div class="np-status">FullScreen ScreenShare Bypassed!</div>
             <div class="np-info">
@@ -341,19 +303,15 @@ function showPopup(resolve, reject, constraints, originalGetDisplayMedia) {
             </div>
             <div class="np-btn-row">
                 <div class="np-btn-wrap">
-                    <div class="np-glow np-glow-orange" aria-hidden="true"></div>
                     <button type="button" class="np-btn ok-btn">Share Tab/Window</button>
                 </div>
                 <div class="np-btn-wrap">
-                    <div class="np-glow np-glow-green" aria-hidden="true"></div>
                     <button type="button" class="np-btn blank-btn">Share Blank Screen</button>
                 </div>
                 <div class="np-btn-wrap">
-                    <div class="np-glow np-glow-purple" aria-hidden="true"></div>
                     <button type="button" class="np-btn freeze-btn">Share Frozen Screen</button>
                 </div>
             </div>
-            <div class="np-auth-toast">This feature requires <strong>NeoPass Pro</strong>. Please login via the extension popup.</div>
             <div class="np-proceed-wrap">
                 <button type="button" class="np-proceed-btn">Proceed without bypass →</button>
             </div>
@@ -361,23 +319,14 @@ function showPopup(resolve, reject, constraints, originalGetDisplayMedia) {
     `;
     shadow.appendChild(root);
 
-    const authToast = root.querySelector('.np-auth-toast');
     const proceedWrap = root.querySelector('.np-proceed-wrap');
 
     function showAuthWall() {
-        authToast.classList.add('visible');
-        proceedWrap.classList.add('visible');
-        const port = document.getElementById('np-ss-auth-port');
-        if (port) port.dataset.npOpenLogin = 'true';
+        // Feature unlocked: Auth wall hidden
     }
 
     async function requirePro(action) {
-        const valid = await validateProAccess();
-        if (valid) {
-            action();
-        } else {
-            showAuthWall();
-        }
+        action(); // Unlocked
     }
 
     const closeBtn = root.querySelector('.np-close');
