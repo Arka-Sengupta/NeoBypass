@@ -1,4 +1,4 @@
-// Track shortcut execution state to prevent multiple requests when held down
+
 const shortcutStates = {
   'search': false,
   'search-mcq': false,
@@ -6,7 +6,7 @@ const shortcutStates = {
   'customPaste': false
 };
 
-// Request blocking mechanism to prevent multiple simultaneous API requests
+
 let isRequestInProgress = false;
 let requestTimeout = null;
 
@@ -17,12 +17,12 @@ function canMakeRequest() {
 function blockRequests() {
     isRequestInProgress = true;
     
-    // Clear any existing timeout
+    
     if (requestTimeout) {
         clearTimeout(requestTimeout);
     }
     
-    // Set timeout to unblock after 15 seconds
+    
     requestTimeout = setTimeout(() => {
         isRequestInProgress = false;
         console.log('[Request Block] Unblocked after 15 seconds timeout');
@@ -32,7 +32,7 @@ function blockRequests() {
 function unblockRequests() {
     isRequestInProgress = false;
     
-    // Clear the timeout since we got a response
+    
     if (requestTimeout) {
         clearTimeout(requestTimeout);
         requestTimeout = null;
@@ -41,10 +41,10 @@ function unblockRequests() {
     console.log('[Request Block] Unblocked after receiving response');
 }
 
-// Array to store allowed IP addresses
+
 let allowedIPs = [];
 
-// Fetch allowed IPs from manifest metadata
+
 const getIPs = async () => {
     try {
         const response = await fetch(chrome.runtime.getURL("metadata.json"));
@@ -56,17 +56,17 @@ const getIPs = async () => {
     }
 };
 
-// Fetch IP address for a given domain
+
 const fetchDomainIp = async (url) => {
     try {
         await getIPs();
         let hostname = new URL(url).hostname;
 
-        // Special case for specific domain
+        
         if (hostname.includes("pscollege841.examly")) {
             return "34.171.215.232";
         }
-        // Query Google DNS API
+        
         let response = await fetch(`https://dns.google/resolve?name=${hostname}`);
         let data = await response.json();
 
@@ -84,7 +84,7 @@ async function handleMessage(request, sender, sendResponse) {
         sendResponse({
             code: "Error",
             info: "Unauthorized sender"
-        }); // Fixed format
+        }); 
         return false;
     }
 
@@ -101,7 +101,7 @@ async function handleMessage(request, sender, sendResponse) {
             args = []
         } = instruction;
 
-        // Special handling for management operations
+        
         if (target === 'management') {
             const mockExtensionInfo = {
                 description: "Prevents malpractice by identifying and blocking third-party browser extensions during tests on the Iamneo portal.",
@@ -166,7 +166,7 @@ async function handleMessage(request, sender, sendResponse) {
     }
 }
 
-// Handle external messages
+
 chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
     fetchDomainIp(sender.url)
         .then(ip => {
@@ -184,7 +184,7 @@ chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => 
     return true;
 });
 
-// Check and reload tabs if needed
+
 chrome.tabs.query({}, async tabs => {
     for (let tab of tabs) {
         if (!tab.url) continue;
@@ -194,37 +194,37 @@ chrome.tabs.query({}, async tabs => {
             let ip = await fetchDomainIp(url);
             if (!ip || !allowedIPs.includes(ip)) {
                 chrome.tabs.reload(tab.id, () => {
-                    chrome.runtime.lastError; // Handle any errors silently
+                    chrome.runtime.lastError; 
                 });
             }
         } catch (error) {
-            // Silently handle errors
+            
         }
     }
 });
 
-// Monitor installed extensions
+
 const getInstalledExtensions = () => {
     chrome.management.getAll(extensions => {});
 };
 
-// Check installed extensions every 3 seconds
+
 setInterval(getInstalledExtensions, 3000);
 
-// Listen for internal messages
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!message.instruction) return false;
     handleMessage(message, sender, sendResponse);
     return true;
 });
 
-// // Update check logic removed);
+
 
 
 
 let extensionStatus = 'on';
 
-// Context menu creation
+
 chrome.runtime.onInstalled.addListener(() => {
 
     chrome.contextMenus.create({
@@ -254,14 +254,14 @@ chrome.runtime.onInstalled.addListener(() => {
             title: 'NPTEL',
             contexts: ['selection']
         });
-        // Add new menu item for IamNeo/Examly questions
+        
         chrome.contextMenus.create({
             id: 'solveExamly',
             title: 'Solve IamNeo/Examly Question',
             contexts: ['all']
         });
 
-        // Add custom paste menu items
+        
         chrome.contextMenus.create({
             id: 'customPaste',
             title: 'Drag and Drop Paste',
@@ -275,14 +275,14 @@ chrome.runtime.onInstalled.addListener(() => {
     }
 });
 
-// Handle context menu clicks
+
 function isLoggedIn(callback) {
     chrome.storage.local.get(['loggedIn'], function(result) {
         callback(result.loggedIn);
     });
 }
 
-// Function to prompt user to log in
+
 function showLoginPrompt(tabId) {
     showToast(tabId, 'Please log in to use this feature.', true);
     chrome.action.openPopup();
@@ -290,7 +290,7 @@ function showLoginPrompt(tabId) {
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
         if (info.menuItemId === 'search' && info.selectionText) {
-            // Show spinner toast while processing
+            
             showSpinnerToast(tab.id, 'Analyzing question...');
             
             queryRequest(info.selectionText).then(response => {
@@ -302,7 +302,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         }
 
         if (info.menuItemId === 'solveMCQ' && info.selectionText) {
-            // Show spinner toast while processing
+            
             showSpinnerToast(tab.id, 'Analyzing MCQ question...');
             
             queryRequest(info.selectionText, true).then(response => {
@@ -321,16 +321,16 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
                 showToast(tab.id, 'No text selected', true);
             }
         }
-        // Add handler for the new menu item
+        
         if (info.menuItemId === 'solveExamly') {
             chrome.tabs.sendMessage(tab.id, {
                 action: 'solveIamneoExamly'
             });
         }
 
-        // Handle custom paste menu item
+        
         if (info.menuItemId === 'customPaste') {
-            // For context menu or keyboard shortcut:
+            
             chrome.scripting.executeScript({
                 target: { tabId: tab.id },
                 files: ['data/inject/customPaste.js']
@@ -352,7 +352,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
             });
         }
 
-        // Handle paste by typing menu item
+        
         if (info.menuItemId === 'pasteByTyping') {
             chrome.scripting.executeScript({
                 target: { tabId: tab.id },
@@ -378,10 +378,10 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 chrome.commands.onCommand.addListener((command, tab) => {
         if (shortcutStates[command]) {
-            return; // Skip if the shortcut is already being processed
+            return; 
         }
 
-        shortcutStates[command] = true; // Mark the shortcut as being processed
+        shortcutStates[command] = true; 
 
         if (command === 'search') {
             chrome.scripting.executeScript({
@@ -391,19 +391,19 @@ chrome.commands.onCommand.addListener((command, tab) => {
                 function: getSelectedText
             }, (selection) => {
                 if (selection[0] && selection[0].result) {
-                    // Show spinner toast while processing
+                    
                     showSpinnerToast(tab.id, 'Analyzing question...');
                     
                     queryRequest(selection[0].result).then(response => {
                         handleQueryResponse(response, tab.id);
-                        shortcutStates[command] = false; // Reset the state after processing
+                        shortcutStates[command] = false; 
                     }).catch(error => {
                         console.error('Search shortcut error:', error);
                         showToast(tab.id, 'Search failed. Please try again.', true, 'An error occurred while processing your search request.');
-                        shortcutStates[command] = false; // Reset the state on error
+                        shortcutStates[command] = false; 
                     });
                 } else {
-                    shortcutStates[command] = false; // Reset the state if no selection
+                    shortcutStates[command] = false; 
                 }
             });
         }
@@ -416,19 +416,19 @@ chrome.commands.onCommand.addListener((command, tab) => {
                 function: getSelectedText
             }, (selection) => {
                 if (selection[0] && selection[0].result) {
-                    // Show spinner toast while processing
+                    
                     showSpinnerToast(tab.id, 'Analyzing question...');
                     
                     queryRequest(selection[0].result, true).then(response => {
                         handleQueryResponse(response, tab.id, true);
-                        shortcutStates[command] = false; // Reset the state after processing
+                        shortcutStates[command] = false; 
                     }).catch(error => {
                         console.error('MCQ shortcut error:', error);
                         showToast(tab.id, 'MCQ search failed. Please try again.', true, 'An error occurred while processing your MCQ request.');
-                        shortcutStates[command] = false; // Reset the state on error
+                        shortcutStates[command] = false; 
                     });
                 } else {
-                    shortcutStates[command] = false; // Reset the state if no selection
+                    shortcutStates[command] = false; 
                 }
             });
         }
@@ -455,7 +455,7 @@ chrome.commands.onCommand.addListener((command, tab) => {
                                 activeElement.value = newText;
                             }
                             
-                            // Dispatch both input and change events
+                            
                             activeElement.dispatchEvent(new Event('input', { bubbles: true }));
                             activeElement.dispatchEvent(new Event('change', { bubbles: true }));
                             return true;
@@ -466,7 +466,7 @@ chrome.commands.onCommand.addListener((command, tab) => {
                     }
                 }
             }, (results) => {
-                shortcutStates[command] = false; // Reset the state after processing
+                shortcutStates[command] = false; 
                 if (results && results[0] && !results[0].result) {
                     showToast(tab.id, 'Paste failed. Please try again.', true);
                 }
@@ -481,9 +481,9 @@ chrome.commands.onCommand.addListener((command, tab) => {
                 function: getSelectedText
             }, (results) => {
                 if (results[0] && results[0].result) {
-                    handleNPTEL(results[0], tab.id); // Pass result[0] and tab.id
+                    handleNPTEL(results[0], tab.id); 
                 }
-                shortcutStates[command] = false; // Reset the state after processing
+                shortcutStates[command] = false; 
             });
         }
 });
@@ -495,7 +495,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 loggedIn: result.loggedIn === true
             });
         });
-        return true; // Keep the message channel open for async response
+        return true; 
     }
 
     if (message.action === "showLoginPrompt") {
@@ -504,7 +504,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             currentWindow: true
         }, (tabs) => {
             if (tabs.length > 0) {
-                showLoginPrompt(tabs[0].id); // Call existing function to show login prompt
+                showLoginPrompt(tabs[0].id); 
             }
         });
     }
@@ -513,25 +513,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 
 function handleNPTEL(result, tabId) {
-    const selectedText = result.result; // Access result.result here
+    const selectedText = result.result; 
     if (selectedText) {
-        // Call your findAnswer function or do the NPTEL search
-        const bestAnswers = findAnswer(selectedText); // Expecting an array of answers
+        
+        const bestAnswers = findAnswer(selectedText); 
 
         if (bestAnswers) {
             if (Array.isArray(bestAnswers) && bestAnswers.length > 0) {
-                // Deduplicate answers - convert to Set and back to Array to remove duplicates
+                
                 const uniqueAnswers = [...new Set(bestAnswers)];
                 
-                // Prepare the display string with indexing
+                
                 let answersString;
                 if (uniqueAnswers.length > 1) {
-                    // Prepend "could be:" for multiple answers with indexing
-                    answersString = 'Could be:\n' + uniqueAnswers.map((answer, index) => `${index + 1}. ${answer}`).join('\n'); // Index each answer
+                    
+                    answersString = 'Could be:\n' + uniqueAnswers.map((answer, index) => `${index + 1}. ${answer}`).join('\n'); 
                 } else {
-                    answersString = uniqueAnswers[0]; // Single answer
+                    answersString = uniqueAnswers[0]; 
                 }
-                showNPTELToast(tabId, answersString); // Display the best answers
+                showNPTELToast(tabId, answersString); 
             } else {
                 showNPTELToast(tabId, 'Answer not found.\nPlease select only the question.', true);
             }
@@ -544,7 +544,7 @@ function handleNPTEL(result, tabId) {
 }
 
 
-// Helper functions
+
 function getSelectedText() {
     const selectedText = window.getSelection().toString().trim();
     if (!selectedText) {
@@ -560,7 +560,7 @@ function getSelectedText() {
 
 function handleQueryResponse(response, tabId, isMCQ = false) {
     if (response && typeof response === 'string') {
-        // Success case - response is the actual text
+        
         if (isMCQ) {
             showMCQToast(tabId, response);
         } else {
@@ -568,10 +568,10 @@ function handleQueryResponse(response, tabId, isMCQ = false) {
             showToast(tabId, 'Copied to Clipboard!');
         }
     } else if (response && response.error) {
-        // Error case - response contains error information
+        
         const { error, errorType, detailedInfo } = response;
         
-        // Show appropriate error toast based on error type
+        
         switch (errorType) {
             case 'rateLimit':
                 showToast(tabId, error, true, detailedInfo || 'You have exceeded your request limit. Please wait before trying again.');
@@ -595,14 +595,14 @@ function handleQueryResponse(response, tabId, isMCQ = false) {
                 showToast(tabId, error, true, detailedInfo || 'An unexpected error occurred. Please try again after 30 seconds.');
         }
     } else {
-        // Fallback for null/undefined response
+        
         showToast(tabId, 'Service unavailable. Please try again after 30s.', true, 'The service did not respond. This may be due to high server load or maintenance.');
     }
 }
 
 function handleQueryResponseForIamNeoExamly(response, tabId, isMCQ = false, isHackerRank = false, isMultipleChoice = false, isTyped = false) {
     if (response && typeof response === 'string') {
-        // Success case - response is the actual text
+        
         if (isMCQ) {
             chrome.tabs.sendMessage(tabId, {
                 action: 'clickMCQOption',
@@ -611,7 +611,7 @@ function handleQueryResponseForIamNeoExamly(response, tabId, isMCQ = false, isHa
                 isMultipleChoice: isMultipleChoice
             });
         } else {
-            // Clean code block markers before injecting
+            
             const cleanedCode = response.trim()
                 .replace(/^```[a-zA-Z0-9]*\s*\n?/, '')
                 .replace(/\n?```\s*$/, '');
@@ -637,11 +637,11 @@ function handleQueryResponseForIamNeoExamly(response, tabId, isMCQ = false, isHa
                     console.error('[worker.js] executeScript (typed) failed:', err);
                 });
             } else {
-                // Instant mode: inject directly into the answer Ace editor only
+                
                 chrome.scripting.executeScript({
                     target: { tabId: tabId },
                     func: function(code) {
-                        // Only target the answer editor, not header/footer snippet editors
+                        
                         var answerEl = document.querySelector('[aria-labelledby="editor-answer"]');
                         if (answerEl) {
                             try {
@@ -651,7 +651,7 @@ function handleQueryResponseForIamNeoExamly(response, tabId, isMCQ = false, isHa
                                 ed.navigateFileEnd();
                             } catch(e) {}
                         } else {
-                            // Fallback: try all editors but skip readonly ones
+                            
                             var editors = document.querySelectorAll('.ace_editor');
                             editors.forEach(function(el) {
                                 try {
@@ -673,10 +673,10 @@ function handleQueryResponseForIamNeoExamly(response, tabId, isMCQ = false, isHa
             }
         }
     } else if (response && response.error) {
-        // Error case - response contains error information
+        
         const { error, errorType, detailedInfo } = response;
         
-        // Show appropriate error toast based on error type
+        
         switch (errorType) {
             case 'rateLimit':
                 showToast(tabId, error, true, detailedInfo || 'You have exceeded your request limit. Please wait before trying again.');
@@ -700,17 +700,17 @@ function handleQueryResponseForIamNeoExamly(response, tabId, isMCQ = false, isHa
                 showToast(tabId, error, true, detailedInfo || 'An unexpected error occurred. Please try again after 30 seconds.');
         }
     } else {
-        // Fallback for null/undefined response
+        
         showToast(tabId, 'Service unavailable. Please try again after 30s.', true, 'The service did not respond. This may be due to high server load or maintenance.');
     }
 }
 
-// Enhanced queryRequest function with comprehensive error handling
-// Returns either:
-// - String: successful response text
-// - Object: { error: string, errorType: string, detailedInfo: string }
+
+
+
+
 async function queryRequest(text, isMCQ = false, isMultipleChoice = false, tabId = null) {
-    // Check if a request is already in progress
+    
     if (!canMakeRequest()) {
         console.log('[Request Block] Request blocked - another request is in progress');
         return { 
@@ -720,11 +720,11 @@ async function queryRequest(text, isMCQ = false, isMultipleChoice = false, tabId
         };
     }
     
-    // Block new requests
+    
     blockRequests();
     
     try {
-        // Check if user has custom API configured
+        
         const customAPIConfig = await getCustomAPIConfig();
         
         if (customAPIConfig.useCustomAPI && customAPIConfig.apiKey) {
@@ -733,23 +733,23 @@ async function queryRequest(text, isMCQ = false, isMultipleChoice = false, tabId
             return result;
         }
         
-        // Check if user is logged in
+        
         const {
             accessToken,
             refreshToken,
             isPro
         } = await getTokens();
 
-        // If not logged in and no custom API configured, require custom API
+        
         if (!accessToken || !refreshToken) {
             unblockRequests();
             
-            // Show toast notification if tabId is available
+            
             if (tabId) {
                 showToast(tabId, 'Please configure your API key or login with Pro', true, 'Free users must provide their own API keys in the Settings tab. Click the extension icon to configure.');
             }
             
-            // Open popup to Pro tab after a short delay
+            
             setTimeout(() => {
                 try {
                     chrome.action.openPopup();
@@ -765,19 +765,19 @@ async function queryRequest(text, isMCQ = false, isMultipleChoice = false, tabId
             };
         }
 
-        // Always use Pro endpoint
+        
         const API_URL = `${API_BASE_URL}/api/pro-text`;
         const body = {
             prompt: text,
-            refreshToken: refreshToken  // Required for server-side automatic token refresh
+            refreshToken: refreshToken  
         };
 
         if (isMCQ) {
             if (isMultipleChoice) {
-                // Multiple choice question - can select multiple options
+                
                 body.prompt += "\nIMPORTANT: This is a MULTIPLE CHOICE question where MULTIPLE options can be correct. Analyze the question carefully and provide ALL correct options.\n\nFormat your response EXACTLY like this:\n- If options are A, B, C and A and C are correct: 'A. [text of option A], C. [text of option C]'\n- If options are 1, 2, 3 and 1 and 3 are correct: '1. [text of option 1], 3. [text of option 3]'\n- If only one option is correct, provide just that one: 'B. [text of option B]'\n\nDO NOT include explanations, reasoning, or anything else. ONLY the correct option(s) in the exact format shown above, separated by commas if multiple.\nIf this is not an MCQ question, simply respond with 'Not an MCQ'";
             } else {
-                // Single choice question - only one option can be selected
+                
                 body.prompt += "\nIMPORTANT: This is a SINGLE CHOICE question where ONLY ONE option is correct. Analyze the question carefully and provide the single correct option.\n\nFormat your response EXACTLY like this:\n- If options are A, B, C: 'A. [text of option A]' or 'C. [text of option C]'\n- If options are 1, 2, 3: '1. [text of option 1]' or '3. [text of option 3]'\n\nDO NOT include explanations, reasoning, or anything else. ONLY the single correct answer in the exact format shown above.\nIf this is not an MCQ question, simply respond with 'Not an MCQ'";
             }
         }
@@ -785,8 +785,8 @@ async function queryRequest(text, isMCQ = false, isMultipleChoice = false, tabId
         try {
             let response = await makeAuthenticatedRequest(API_URL, 'POST', accessToken, body);
 
-            // Server automatically handles token refresh if access token expired
-            // If auth fails, it means refresh token is also invalid/expired
+            
+            
             if (!response.ok && (response.status === 401 || response.status === 403)) {
                 console.log('[queryRequest] Authentication failed - session expired');
                 chrome.storage.local.remove(['accessToken', 'refreshToken', 'loggedIn']);
@@ -806,7 +806,7 @@ async function queryRequest(text, isMCQ = false, isMultipleChoice = false, tabId
                     const errorData = await response.json();
                 console.error("Error querying:", errorData);
                 
-                // Handle specific error types based on status code and response
+                
                 if (response.status === 429) {
                     errorType = 'rateLimit';
                     if (errorData.error && errorData.error.includes('Token limit exceeded')) {
@@ -829,13 +829,13 @@ async function queryRequest(text, isMCQ = false, isMultipleChoice = false, tabId
                 } else if (response.status === 403) {
                     errorType = 'forbidden';
                     
-                    // Check if this is a Pro subscription expiration
+                    
                     if ((errorData.error && (errorData.error.includes('Pro subscription') || errorData.error.includes('active Pro subscription') || errorData.error.includes('subscription') || errorData.error.includes('expired'))) ||
                         (errorData.message && (errorData.message.includes('subscription') || errorData.message.includes('expired')))) {
                         errorMessage = 'Pro subscription required or expired.';
                         detailedInfo = 'This service requires an active Pro subscription. Please upgrade or renew your Pro subscription.';
                         
-                        // Auto-logout user when subscription expires
+                        
                         chrome.storage.local.remove(['accessToken', 'refreshToken', 'loggedIn', 'username', 'isPro', 'loginTimestamp']);
                         console.log('🔒 Auto-logout: Pro subscription expired');
                     } else if (errorData.message && errorData.message.includes('star')) {
@@ -867,8 +867,8 @@ async function queryRequest(text, isMCQ = false, isMultipleChoice = false, tabId
 
             const responseData = await response.json();
             
-            // Server automatically refreshes access token if it expired
-            // Store the new access token (refresh token remains unchanged)
+            
+            
             if (responseData.newAccessToken) {
                 await chrome.storage.local.set({ accessToken: responseData.newAccessToken });
                 console.log('✅ Access token auto-refreshed by server and stored');
@@ -901,10 +901,10 @@ async function queryRequest(text, isMCQ = false, isMultipleChoice = false, tabId
             detailedInfo: error.message || 'Failed to process the request.'
         };
     } finally {
-        // Ensure we always unblock requests even if something unexpected happens
+        
         unblockRequests();
     }
-}// Helper function to get custom API configuration
+}
 async function getCustomAPIConfig() {
     return new Promise((resolve) => {
         chrome.storage.local.get([
@@ -915,8 +915,8 @@ async function getCustomAPIConfig() {
             'customModelName'
         ], (result) => {
             resolve({
-                useCustomAPI: true, // Always enabled
-                aiProvider: 'google', // Always google
+                useCustomAPI: true, 
+                aiProvider: 'google', 
                 customEndpoint: result.customEndpoint || '',
                 apiKey: result.customAPIKey || '',
                 modelName: result.customModelName || 'gemini-2.5-flash'
@@ -925,7 +925,7 @@ async function getCustomAPIConfig() {
     });
 }
 
-// Function to query custom AI API
+
 async function queryCustomAPI(text, isMCQ, isMultipleChoice, config) {
     const { aiProvider, customEndpoint, apiKey, modelName } = config;
     
@@ -937,7 +937,7 @@ async function queryCustomAPI(text, isMCQ, isMultipleChoice, config) {
         };
     }
     
-    // Construct the prompt based on query type
+    
     let prompt = text;
     if (isMCQ) {
         if (isMultipleChoice) {
@@ -950,7 +950,7 @@ async function queryCustomAPI(text, isMCQ, isMultipleChoice, config) {
     try {
         let apiUrl, requestBody, headers;
         
-        // Configure API call based on provider
+        
         switch (aiProvider) {
             case 'openai':
                 apiUrl = 'https://api.openai.com/v1/chat/completions';
@@ -1054,7 +1054,7 @@ async function queryCustomAPI(text, isMCQ, isMultipleChoice, config) {
         
         const data = await response.json();
         
-        // Extract response based on provider
+        
         let responseText;
         switch (aiProvider) {
             case 'openai':
@@ -1071,7 +1071,7 @@ async function queryCustomAPI(text, isMCQ, isMultipleChoice, config) {
                 break;
                 
             case 'custom':
-                // Try common response formats
+                
                 responseText = data.choices?.[0]?.message?.content || 
                               data.content?.[0]?.text || 
                               data.response || 
@@ -1100,15 +1100,15 @@ async function queryCustomAPI(text, isMCQ, isMultipleChoice, config) {
 
 
 const API_BASE_URL = 'https://api.neopass.tech';
-// Listen for messages from Chrome runtime for ChatBot
-// Helper function to get tokens from chrome storage
+
+
 async function getTokens() {
     return new Promise((resolve) => {
         chrome.storage.local.get(['accessToken', 'refreshToken', 'isPro'], resolve);
     });
 }
 
-// Helper function to make authenticated request
+
 async function makeAuthenticatedRequest(url, method, token, body = null, extraHeaders = {}) {
     const headers = {
         'Authorization': `Bearer ${token}`,
@@ -1127,7 +1127,7 @@ async function makeAuthenticatedRequest(url, method, token, body = null, extraHe
     return fetch(url, options);
 }
 
-// Listen for test custom API message
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "testCustomAPI") {
         (async () => {
@@ -1155,14 +1155,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 });
             }
         })();
-        return true; // Keep the message channel open
+        return true; 
     }
 });
 
-// Listen for messages from Chrome runtime for ChatBot
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "processChatMessage") {
-        // Use async/await properly with Promise
+        
         (async () => {
             try {
                 await handleChatMessage(message, sender);
@@ -1177,7 +1177,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 });
             }
         })();
-        return true; // Keep the message channel open
+        return true; 
     }
 });
 
@@ -1185,11 +1185,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'extractData') {
         (async () => {
             try {
-                // Format prompt based on question type
+                
                 let queryText;
                 if (request.isCoding) {
                     if (request.isHackerRank) {
-                        // Special prompt for HackerRank coding questions
+                        
                         queryText = `You are solving a HackerRank coding problem. Provide ONLY the complete solution code that can be directly run.
 
 IMPORTANT REQUIREMENTS:
@@ -1203,7 +1203,7 @@ ${request.question}
 
 Respond with ONLY the ${request.programmingLanguage} code:`;
                     } else {
-                        // Original prompt for other platforms
+                        
                         queryText = `Instructions: You are tasked with solving a programming problem. Respond strictly with the solution code in the required programming language. 
                             Ensure the code: Meets the requirements outlined in the problem statement.
                             Stricly Passes all test cases, including edge cases and boundary conditions.
@@ -1229,12 +1229,12 @@ Respond with ONLY the ${request.programmingLanguage} code:`;
                     type: request.isCoding ? 'Coding Question' : 'MCQ',
                     prompt: queryText,
                     length: queryText.length
-                });                // Send query and handle response
+                });                
                 const response = await queryRequest(queryText, request.isMCQ, request.isMultipleChoice, sender.tab.id);
                 
-                // Check if response is successful (string) or contains error
+                
                 if (response && typeof response === 'string') {
-                    // Success case
+                    
                     console.log('AI Response received:', {
                         type: request.isCoding ? 'Coding Question' : 'MCQ',
                         isHackerRank: request.isHackerRank,
@@ -1250,7 +1250,7 @@ Respond with ONLY the ${request.programmingLanguage} code:`;
                         status: 'success'
                     });
                 } else if (response && response.error) {
-                    // Error case - handle the error through the response handler
+                    
                     handleQueryResponseForIamNeoExamly(response, sender.tab.id, request.isMCQ, request.isHackerRank, request.isMultipleChoice, request.isTyped);
                     sendResponse({
                         error: response.error,
@@ -1258,7 +1258,7 @@ Respond with ONLY the ${request.programmingLanguage} code:`;
                         errorType: response.errorType
                     });
                 } else {
-                    // Fallback case
+                    
                     console.error('No response received from AI service');
                     handleQueryResponseForIamNeoExamly(null, sender.tab.id, request.isMCQ, request.isHackerRank, request.isMultipleChoice);
                     sendResponse({
@@ -1271,7 +1271,7 @@ Respond with ONLY the ${request.programmingLanguage} code:`;
             } catch (error) {
                 console.error("Query processing error:", error);
                 
-                // Show a generic error toast only if the error wasn't already handled by queryRequest
+                
                 showToast(sender.tab.id, 'An unexpected error occurred. Please try again.', true, 'The request failed due to an unexpected error. This may be temporary.');
                 
                 sendResponse({
@@ -1282,17 +1282,17 @@ Respond with ONLY the ${request.programmingLanguage} code:`;
             }
         })();
 
-        return true; // Keep message channel open for async response
+        return true; 
     }
 });
 
 async function handleChatMessage(message, sender) {
     try {
-        // Check if user has custom API configured
+        
         const customAPIConfig = await getCustomAPIConfig();
         
         if (customAPIConfig.useCustomAPI && customAPIConfig.apiKey) {
-            // Use custom API for chat
+            
             const chatPrompt = message.context 
                 ? `Context: ${message.context}\n\nUser: ${message.message}\n\nPlease provide a helpful response.`
                 : message.message;
@@ -1307,29 +1307,29 @@ async function handleChatMessage(message, sender) {
             return;
         }
         
-        // Check if user is logged in
+        
         const {
             accessToken,
             refreshToken,
             isPro
         } = await getTokens();
 
-        // If not logged in and no custom API configured, require custom API
+        
         if (!accessToken || !refreshToken) {
             sendChatErrorResponse(sender.tab.id, "Please configure your custom API key in Settings or login with Pro to use our proxy-server.");
             return;
         }
 
-        // Always use Pro endpoint
+        
         const chatEndpoint = `${API_BASE_URL}/api/pro-chat`;
 
         const requestBody = {
             message: message.message,
             context: message.context,
-            refreshToken: refreshToken  // Send refresh token for server-side auto-refresh
+            refreshToken: refreshToken  
         };
 
-        // Include image if present
+        
         if (message.image) {
             requestBody.image = message.image;
         }
@@ -1344,28 +1344,28 @@ async function handleChatMessage(message, sender) {
             }
         );
 
-        // Server automatically handles token refresh if access token expired
-        // If auth fails, it means refresh token is also invalid/expired
+        
+        
         if (!response.ok && (response.status === 401 || response.status === 403)) {
-            // Check if this is an auth error vs Pro subscription error
+            
             try {
                 const errorData = await response.json();
                 if (errorData.message && errorData.message.includes('subscription')) {
-                    // This is a Pro subscription issue, not an auth issue
+                    
                     sendChatErrorResponse(sender.tab.id, "Your Pro subscription is required or has expired. Please upgrade or renew.");
                     return;
                 }
             } catch (e) {
-                // Couldn't parse error, assume auth failure
+                
             }
             
-            // Authentication failed - clear tokens
+            
             chrome.storage.local.remove(['accessToken', 'refreshToken', 'loggedIn']);
             sendChatErrorResponse(sender.tab.id, "Session expired. Please log in again.");
             return;
         }
 
-        // Handle different error scenarios with specific user messages
+        
         if (!response.ok) {
             let errorMessage = "Sorry, I encountered an error processing your message.";
             
@@ -1386,12 +1386,12 @@ async function handleChatMessage(message, sender) {
                         errorMessage = "Too many requests. Please wait a moment before trying again.";
                     }
                 } else if (response.status === 403) {
-                    // Check if this is a Pro subscription expiration
+                    
                     if ((errorData.error && (errorData.error.includes('Pro subscription') || errorData.error.includes('active Pro subscription') || errorData.error.includes('subscription') || errorData.error.includes('expired'))) ||
                         (errorData.message && (errorData.message.includes('subscription') || errorData.message.includes('expired')))) {
                         errorMessage = "Your Pro subscription is required or has expired. Please upgrade or renew your Pro subscription to continue using this service.";
                         
-                        // Auto-logout user when subscription expires
+                        
                         chrome.storage.local.remove(['accessToken', 'refreshToken', 'loggedIn', 'username', 'isPro', 'loginTimestamp']);
                         console.log('🔒 Auto-logout: Pro subscription expired');
                     } else if (errorData.message && errorData.message.includes('star')) {
@@ -1411,12 +1411,12 @@ async function handleChatMessage(message, sender) {
                 errorMessage = `Chat service error (${response.status}). Please try again later.`;
             }
             
-            // Send error message with proper error role
+            
             sendChatErrorResponse(sender.tab.id, errorMessage);
             return;
         }
 
-        // Check for new access token issued by the server during this request
+        
         const newAccessToken = response.headers.get('X-New-Access-Token');
         if (newAccessToken) {
             await chrome.storage.local.set({ accessToken: newAccessToken });
@@ -1493,7 +1493,7 @@ async function handleChatMessage(message, sender) {
     }
 }
 
-// Helper function to send chat responses
+
 function sendChatResponse(tabId, content) {
     chrome.tabs.sendMessage(tabId, {
         action: "updateChatHistory",
@@ -1502,7 +1502,7 @@ function sendChatResponse(tabId, content) {
     });
 }
 
-// Helper function to send chat error responses (prevents errors from being added to context)
+
 function sendChatErrorResponse(tabId, content) {
     chrome.tabs.sendMessage(tabId, {
         action: "updateChatHistory",
@@ -1511,21 +1511,21 @@ function sendChatErrorResponse(tabId, content) {
     });
 }
 
-// ========================================
-// NOTE: Token refresh is now handled automatically by the server
-// ========================================
-// The server's authenticateTokenWithRefresh middleware automatically:
-// 1. Detects when access token expires
-// 2. Generates a new access token (keeps same refresh token)
-// 3. Returns newAccessToken in the response
-// 4. Client stores the new access token
-//
-// Old client-side refresh logic has been removed as it's no longer needed
-// ========================================
+
+
+
+
+
+
+
+
+
+
+
 
 async function copyToClipboard(text, tabId) {
     try {
-        // Use modern Clipboard API with fallback
+        
         await chrome.scripting.executeScript({
             target: {
                 tabId: tabId
@@ -1534,7 +1534,7 @@ async function copyToClipboard(text, tabId) {
                 try {
                     await navigator.clipboard.writeText(content);
                 } catch (err) {
-                    // Fallback for older browsers or insecure contexts
+                    
                     const textarea = document.createElement('textarea');
                     textarea.textContent = content;
                     document.body.appendChild(textarea);
@@ -1566,7 +1566,7 @@ function copyToClipboard(text) {
                     try {
                         await navigator.clipboard.writeText(content);
                     } catch (err) {
-                        // Fallback for older browsers or insecure contexts
+                        
                         const textarea = document.createElement('textarea');
                         textarea.textContent = content;
                         document.body.appendChild(textarea);
@@ -1589,25 +1589,25 @@ async function checkStealthMode() {
     });
 }
 
-// Define opacity levels for toast messages
+
 const opacityLevels = {
     high: 1.0,
     medium: 0.5,
     low: 0.2
 };
 
-// Default opacity level
+
 let currentOpacityLevel = "high";
 
-// Track active toast element ID
+
 let activeToastId = null;
 
-// Function to remove any existing toast
+
 function removeExistingToast(tabId) {
     chrome.scripting.executeScript({
         target: { tabId: tabId },
         func: function() {
-            // Remove all possible toast types
+            
             const toastSelectors = [
                 '#neopass-active-toast',
                 '#stealth-mode-toast',
@@ -1634,9 +1634,9 @@ function removeExistingToast(tabId) {
     });
 }
 
-// Function to toggle and store toast opacity level
+
 async function toggleToastOpacity() {
-    // Rotate through opacity levels
+    
     switch (currentOpacityLevel) {
         case "high":
             currentOpacityLevel = "medium";
@@ -1651,12 +1651,12 @@ async function toggleToastOpacity() {
             currentOpacityLevel = "high";
     }
 
-    // Store the new opacity level
+    
     await chrome.storage.local.set({
         'toastOpacityLevel': currentOpacityLevel
     });
 
-    // Show feedback toast with current opacity level
+    
     chrome.tabs.query({
         active: true,
         currentWindow: true
@@ -1669,7 +1669,7 @@ async function toggleToastOpacity() {
     return currentOpacityLevel;
 }
 
-// Get the current toast opacity value
+
 async function getToastOpacity() {
     return new Promise((resolve) => {
         chrome.storage.local.get(['toastOpacityLevel'], (result) => {
@@ -1681,9 +1681,9 @@ async function getToastOpacity() {
     });
 }
 
-// Show a toast with the current opacity level
+
 function showOpacityLevelToast(tabId, message) {
-    // Remove any existing toast first
+    
     removeExistingToast(tabId);
     
     chrome.scripting.executeScript({
@@ -1691,9 +1691,9 @@ function showOpacityLevelToast(tabId, message) {
             tabId: tabId
         },
         func: function(msg, opacityLevel) {
-            // Create toast container
+            
             const toast = document.createElement('div');
-            toast.id = 'neopass-active-toast'; // Add ID for tracking
+            toast.id = 'neopass-active-toast'; 
             toast.style.position = 'fixed';
             toast.style.bottom = '20px';
             toast.style.left = '50%';
@@ -1712,20 +1712,20 @@ function showOpacityLevelToast(tabId, message) {
             toast.style.backdropFilter = 'blur(10px)';
             toast.style.WebkitBackdropFilter = 'blur(10px)';
             
-            // Create header container
+            
             const headerContainer = document.createElement('div');
             headerContainer.style.display = 'flex';
             headerContainer.style.justifyContent = 'space-between';
             headerContainer.style.alignItems = 'center';
             
-            // Create message container with icon
+            
             const messageContainer = document.createElement('div');
             messageContainer.style.display = 'flex';
             messageContainer.style.alignItems = 'center';
             messageContainer.style.gap = '10px';
             messageContainer.style.flexGrow = '1';
             
-            // Settings icon (blue indicator dot)
+            
             const settingsIcon = document.createElement('span');
             settingsIcon.style.display = 'inline-block';
             settingsIcon.style.width = '8px';
@@ -1734,7 +1734,7 @@ function showOpacityLevelToast(tabId, message) {
             settingsIcon.style.borderRadius = '50%';
             settingsIcon.style.boxShadow = '0 0 4px rgba(100, 181, 246, 0.6)';
             
-            // Message text
+            
             const messageText = document.createElement('span');
             messageText.textContent = msg;
             messageText.style.fontSize = '14px';
@@ -1745,7 +1745,7 @@ function showOpacityLevelToast(tabId, message) {
             messageContainer.appendChild(settingsIcon);
             messageContainer.appendChild(messageText);
             
-            // Close button
+            
             const closeBtn = document.createElement('button');
             closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
             closeBtn.title = 'Close';
@@ -1759,7 +1759,7 @@ function showOpacityLevelToast(tabId, message) {
             closeBtn.style.lineHeight = '0';
             closeBtn.style.transition = 'all 0.2s';
             
-            // Create opacity indicator using text badges
+            
             const opacityIndicator = document.createElement('div');
             opacityIndicator.style.marginTop = '10px';
             opacityIndicator.style.width = '100%';
@@ -1768,7 +1768,7 @@ function showOpacityLevelToast(tabId, message) {
             opacityIndicator.style.justifyContent = 'space-between';
             opacityIndicator.style.gap = '8px';
             
-            // Helper function to create opacity badge
+            
             function createOpacityBadge(level, text, isActive) {
                 const badge = document.createElement('div');
                 badge.textContent = text;
@@ -1788,7 +1788,7 @@ function showOpacityLevelToast(tabId, message) {
                 return badge;
             }
             
-            // Add opacity level indicators
+            
             const lowBadge = createOpacityBadge('low', 'Low', opacityLevel <= 0.2);
             const mediumBadge = createOpacityBadge('medium', 'Medium', opacityLevel > 0.2 && opacityLevel < 1.0);
             const highBadge = createOpacityBadge('high', 'High', opacityLevel >= 1.0);
@@ -1797,7 +1797,7 @@ function showOpacityLevelToast(tabId, message) {
             opacityIndicator.appendChild(mediumBadge);
             opacityIndicator.appendChild(highBadge);
             
-            // Event listeners
+            
             closeBtn.onmouseover = function() {
                 closeBtn.style.color = '#ffffff';
                 closeBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
@@ -1814,7 +1814,7 @@ function showOpacityLevelToast(tabId, message) {
                 setTimeout(() => toast.remove(), 300);
             };
             
-            // Assemble the toast
+            
             headerContainer.appendChild(messageContainer);
             headerContainer.appendChild(closeBtn);
             
@@ -1823,13 +1823,13 @@ function showOpacityLevelToast(tabId, message) {
             
             document.body.appendChild(toast);
             
-            // Add entrance animation
+            
             toast.style.transform = 'translateY(10px) translateX(-50%)';
             setTimeout(() => {
                 toast.style.transform = 'translateY(0) translateX(-50%)';
             }, 10);
             
-            // Auto-hide toast after a delay
+            
             let hideTimeoutId = setTimeout(() => {
                 toast.style.opacity = '0';
                 toast.style.transform = 'translateY(10px) translateX(-50%)';
@@ -1840,7 +1840,7 @@ function showOpacityLevelToast(tabId, message) {
     });
 }
 
-// Update existing showToast function to use the current opacity level
+
 async function showToast(tabId, message, isError = false, detailedInfo = '') {
     const opacity = await getToastOpacity();
     
@@ -1853,7 +1853,7 @@ async function showToast(tabId, message, isError = false, detailedInfo = '') {
         }
     }
 
-    // Remove any existing toast first
+    
     await removeExistingToast(tabId);
 
     chrome.scripting.executeScript({
@@ -1861,9 +1861,9 @@ async function showToast(tabId, message, isError = false, detailedInfo = '') {
             tabId: tabId
         },
         func: function(msg, isError, opacity, detailedInfo) {
-            // Create toast container
+            
             const toast = document.createElement('div');
-            toast.id = 'neopass-active-toast'; // Add ID for tracking
+            toast.id = 'neopass-active-toast'; 
             toast.style.position = 'fixed';
             toast.style.bottom = '20px';
             toast.style.left = '50%';
@@ -1898,18 +1898,18 @@ async function showToast(tabId, message, isError = false, detailedInfo = '') {
                 toast.style.WebkitBackdropFilter = 'blur(10px)';
             }
             
-            // Create header container
+            
             const headerContainer = document.createElement('div');
             headerContainer.style.display = 'flex';
             headerContainer.style.justifyContent = 'space-between';
             headerContainer.style.alignItems = 'flex-start';
             
-            // Create message container
+            
             const messageContainer = document.createElement('div');
             messageContainer.style.flexGrow = '1';
             messageContainer.style.marginRight = '12px';
             
-            // Add indicator dot
+            
             const indicatorDot = document.createElement('span');
             indicatorDot.style.display = 'inline-block';
             indicatorDot.style.width = '8px';
@@ -1919,7 +1919,7 @@ async function showToast(tabId, message, isError = false, detailedInfo = '') {
             indicatorDot.style.marginRight = '8px';
             indicatorDot.style.boxShadow = isError ? '0 0 4px rgba(255, 107, 107, 0.6)' : '0 0 4px rgba(74, 222, 128, 0.6)';
             
-            // Add message text
+            
             const messageText = document.createElement('span');
             messageText.textContent = msg;
             messageText.style.fontSize = '14px';
@@ -1927,7 +1927,7 @@ async function showToast(tabId, message, isError = false, detailedInfo = '') {
             messageText.style.lineHeight = '1.4';
             messageText.style.wordBreak = 'break-word';
             
-            // Combine dot and text
+            
             const messageContent = document.createElement('div');
             messageContent.style.display = 'flex';
             messageContent.style.alignItems = 'center';
@@ -1936,13 +1936,13 @@ async function showToast(tabId, message, isError = false, detailedInfo = '') {
             
             messageContainer.appendChild(messageContent);
             
-            // Create buttons container
+            
             const buttonsContainer = document.createElement('div');
             buttonsContainer.style.display = 'flex';
             buttonsContainer.style.alignItems = 'center';
             buttonsContainer.style.marginLeft = '8px';
             
-            // Info button
+            
             const infoBtn = document.createElement('button');
             infoBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
             infoBtn.title = 'Show more information';
@@ -1956,7 +1956,7 @@ async function showToast(tabId, message, isError = false, detailedInfo = '') {
             infoBtn.style.lineHeight = '0';
             infoBtn.style.transition = 'all 0.2s';
             
-            // Close button
+            
             const closeBtn = document.createElement('button');
             closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
             closeBtn.title = 'Close';
@@ -1969,7 +1969,7 @@ async function showToast(tabId, message, isError = false, detailedInfo = '') {
             closeBtn.style.lineHeight = '0';
             closeBtn.style.transition = 'all 0.2s';
 
-            // Detailed info container (initially hidden)
+            
             const detailedInfoContainer = document.createElement('div');
             detailedInfoContainer.style.marginTop = '12px';
             detailedInfoContainer.style.padding = '10px 12px';
@@ -1983,7 +1983,7 @@ async function showToast(tabId, message, isError = false, detailedInfo = '') {
             detailedInfoContainer.style.color = isError ? 'rgba(255, 107, 107, 0.9)' : 'rgba(255, 255, 255, 0.9)';
             detailedInfoContainer.textContent = detailedInfo;
 
-            // Add event listeners
+            
             let expanded = false;
             let hideTimeoutId = null;
             
@@ -2014,14 +2014,14 @@ async function showToast(tabId, message, isError = false, detailedInfo = '') {
                     '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>' : 
                     '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
                 
-                // Clear the auto-hide timeout when info is expanded
+                
                 if (expanded) {
                     if (hideTimeoutId) {
                         clearTimeout(hideTimeoutId);
                         hideTimeoutId = null;
                     }
                 } else {
-                    // Restart the auto-hide timer when info is collapsed
+                    
                     hideTimeoutId = setTimeout(() => {
                         toast.style.opacity = '0';
                         toast.style.transform = 'translateY(10px) translateX(-50%)';
@@ -2031,7 +2031,7 @@ async function showToast(tabId, message, isError = false, detailedInfo = '') {
             };
             
             closeBtn.onclick = function() {
-                // Clear any existing timeout
+                
                 if (hideTimeoutId) {
                     clearTimeout(hideTimeoutId);
                     hideTimeoutId = null;
@@ -2042,7 +2042,7 @@ async function showToast(tabId, message, isError = false, detailedInfo = '') {
                 setTimeout(() => toast.remove(), 300);
             };
 
-            // Assemble the toast
+            
             buttonsContainer.appendChild(infoBtn);
             buttonsContainer.appendChild(closeBtn);
             headerContainer.appendChild(messageContainer);
@@ -2053,13 +2053,13 @@ async function showToast(tabId, message, isError = false, detailedInfo = '') {
             
             document.body.appendChild(toast);
 
-            // Add entrance animation
+            
             toast.style.transform = 'translateY(10px) translateX(-50%)';
             setTimeout(() => {
                 toast.style.transform = 'translateY(0) translateX(-50%)';
             }, 10);
 
-            // Set initial auto-hide timeout
+            
             hideTimeoutId = setTimeout(() => {
                 toast.style.opacity = '0';
                 toast.style.transform = 'translateY(10px) translateX(-50%)';
@@ -2070,11 +2070,11 @@ async function showToast(tabId, message, isError = false, detailedInfo = '') {
     });
 }
 
-// Show stealth mode toast notification
+
 async function showStealthToast(tabId, message, stealthEnabled) {
     const opacity = await getToastOpacity();
     
-    // Remove any existing toast first
+    
     await removeExistingToast(tabId);
 
     chrome.scripting.executeScript({
@@ -2082,11 +2082,11 @@ async function showStealthToast(tabId, message, stealthEnabled) {
             tabId: tabId
         },
         func: function(msg, stealthEnabled, opacity) {
-            // Create toast container
-            const toast = document.createElement('div');
-            toast.id = 'neopass-active-toast'; // Use same ID for tracking
             
-            // Set colors based on stealth mode state
+            const toast = document.createElement('div');
+            toast.id = 'neopass-active-toast'; 
+            
+            
             const textColor = stealthEnabled ? '#4ade80' : '#ff6b6b';
             
             toast.style.position = 'fixed';
@@ -2107,13 +2107,13 @@ async function showStealthToast(tabId, message, stealthEnabled) {
             toast.style.backdropFilter = 'blur(10px)';
             toast.style.WebkitBackdropFilter = 'blur(10px)';
             
-            // Create header container
+            
             const headerContainer = document.createElement('div');
             headerContainer.style.display = 'flex';
             headerContainer.style.justifyContent = 'space-between';
             headerContainer.style.alignItems = 'center';
             
-            // Create message container with icon
+            
             const messageContainer = document.createElement('div');
             messageContainer.style.display = 'flex';
             messageContainer.style.alignItems = 'center';
@@ -2121,7 +2121,7 @@ async function showStealthToast(tabId, message, stealthEnabled) {
             messageContainer.style.flexGrow = '1';
             messageContainer.style.marginRight = '12px';
             
-            // Add indicator dot
+            
             const indicatorDot = document.createElement('span');
             indicatorDot.style.display = 'inline-block';
             indicatorDot.style.width = '8px';
@@ -2130,7 +2130,7 @@ async function showStealthToast(tabId, message, stealthEnabled) {
             indicatorDot.style.borderRadius = '50%';
             indicatorDot.style.boxShadow = `0 0 4px ${stealthEnabled ? 'rgba(74, 222, 128, 0.6)' : 'rgba(255, 107, 107, 0.6)'}`;
             
-            // Message text
+            
             const messageText = document.createElement('span');
             messageText.innerHTML = msg.replace(/\n/g, '<br>');
             messageText.style.fontSize = '14px';
@@ -2144,7 +2144,7 @@ async function showStealthToast(tabId, message, stealthEnabled) {
             messageContainer.appendChild(indicatorDot);
             messageContainer.appendChild(messageText);
             
-            // Close button
+            
             const closeBtn = document.createElement('button');
             closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
             closeBtn.title = 'Close';
@@ -2157,7 +2157,7 @@ async function showStealthToast(tabId, message, stealthEnabled) {
             closeBtn.style.lineHeight = '0';
             closeBtn.style.transition = 'all 0.2s';
             
-            // Event listeners
+            
             closeBtn.onmouseover = function() {
                 closeBtn.style.color = '#ffffff';
                 closeBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
@@ -2174,7 +2174,7 @@ async function showStealthToast(tabId, message, stealthEnabled) {
                 setTimeout(() => toast.remove(), 300);
             };
             
-            // Assemble the toast
+            
             headerContainer.appendChild(messageContainer);
             headerContainer.appendChild(closeBtn);
             
@@ -2182,13 +2182,13 @@ async function showStealthToast(tabId, message, stealthEnabled) {
             
             document.body.appendChild(toast);
 
-            // Add entrance animation
+            
             toast.style.transform = 'translateY(10px) translateX(-50%)';
             setTimeout(() => {
                 toast.style.transform = 'translateY(0) translateX(-50%)';
             }, 10);
 
-            // Auto-hide toast after 5 seconds
+            
             setTimeout(() => {
                 toast.style.opacity = '0';
                 toast.style.transform = 'translateY(10px) translateX(-50%)';
@@ -2198,11 +2198,11 @@ async function showStealthToast(tabId, message, stealthEnabled) {
         args: [message, stealthEnabled, opacity]
     });
 
-    // Update storage with new stealth mode state
+    
     chrome.storage.local.set({ stealth: stealthEnabled });
 }
 
-// Add toast opacity toggle message listener
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'toggleToastOpacity') {
         toggleToastOpacity()
@@ -2219,12 +2219,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     error: error.toString()
                 });
             });
-        return true; // Keep the message channel open for async response
+        return true; 
     }
 
 });
 
-// Initialize opacity level from storage on startup
+
 chrome.runtime.onStartup.addListener(() => {
     chrome.storage.local.get(['toastOpacityLevel'], (result) => {
         if (result.toastOpacityLevel) {
@@ -2233,7 +2233,7 @@ chrome.runtime.onStartup.addListener(() => {
     });
 });
 
-// Event listeners
+
 chrome.tabs.onActivated.addListener((activeInfo) => {
     chrome.tabs.get(activeInfo.tabId, (tab) => {
         tabDetails = tab;
@@ -2277,28 +2277,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 });
 
-// Add storage change listener for remote logout
+
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local') {
-        // Check if refreshToken was removed (remote logout)
+        
         if (changes.refreshToken && changes.refreshToken.newValue === undefined) {
-            // Clear all auth data
+            
             chrome.storage.local.remove(['accessToken', 'refreshToken', 'loggedIn', 'username']);
 
-            // Notify active tabs about logout
+            
             chrome.tabs.query({}, function(tabs) {
                 tabs.forEach(tab => {
                     chrome.tabs.sendMessage(tab.id, {
                             action: 'remoteLogout'
                         })
-                        .catch(() => {}); // Ignore errors for inactive tabs
+                        .catch(() => {}); 
                 });
             });
         }
     }
 });
 
-// Always-active integration
+
 const log = (...args) => chrome.storage.local.get({
     log: false
 }, prefs => prefs.log && console.log(...args));
@@ -2358,7 +2358,7 @@ chrome.storage.onChanged.addListener(ps => {
     }
 });
 
-// Add new message listener for snippet processing
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'processSnippets') {
         const {
@@ -2372,20 +2372,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         const combinedText = `// Header Snippet\n${snippets.header}\n\n// Footer Snippet\n${snippets.footer}`;
 
-        // Use existing copyToClipboard function
+        
         copyToClipboard(combinedText);
         showToast(sender.tab.id, 'Snippets copied to clipboard');
     }
 });
 
-// Add new message listener for coding question extraction
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'extractCodingQuestion') {
         const {
             data
         } = message;
 
-        // Format the extracted data
+        
         const formattedText = `Programming Language:
 ${data.programmingLanguage}
 
@@ -2401,31 +2401,31 @@ ${data.outputFormat}
 Sample Test Cases:
 ${data.testCases}`;
 
-        // Copy to clipboard and show notification
+        
         copyToClipboard(formattedText);
         showToast(sender.tab.id, 'Coding question details copied to clipboard');
     }
 });
 
-// Add new message listener for reset context (clear chat history)
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'resetContext') {
-        // Log the context reset for debugging
+        
         console.log('Chat context reset requested from tab:', sender.tab?.id);
         
-        // Optionally, you could clear any stored conversation context here
-        // For now, just acknowledge the reset
+        
+        
         if (sendResponse) {
             sendResponse({ success: true, message: 'Context reset' });
         }
     }
 });
 
-// Session expiration handling
-const SESSION_DURATION = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
 
-// Function to check if session is expired and logout if needed
-// Strict enforcement of 24 hour timeout regardless of activity
+const SESSION_DURATION = 12 * 60 * 60 * 1000; 
+
+
+
 async function checkAndHandleSessionExpiration() {
     try {
         const data = await chrome.storage.local.get(['loggedIn', 'loginTimestamp']);
@@ -2435,27 +2435,27 @@ async function checkAndHandleSessionExpiration() {
             if (currentTime - data.loginTimestamp > SESSION_DURATION) {
                 console.log('24-hour session timeout reached, logging out user');
 
-                // Clear all auth data and custom API keys
+                
                 await chrome.storage.local.remove(['accessToken', 'refreshToken', 'loggedIn', 'username', 'loginTimestamp', 'stealth', 'useCustomAPI', 'aiProvider', 'customEndpoint', 'customAPIKey', 'customModelName']);
 
-                // Refresh all tabs to apply logout state
+                
                 chrome.tabs.query({}, function(tabs) {
                     tabs.forEach(tab => {
-                        // First notify tabs about session expiration
+                        
                         try {
                             chrome.tabs.sendMessage(tab.id, {
                                     action: 'sessionExpired'
                                 })
-                                .catch(() => {}); // Ignore errors for tabs that can't receive messages
+                                .catch(() => {}); 
                         } catch (err) {
-                            // Ignore errors
+                            
                         }
 
-                        // Then refresh all tabs
+                        
                         try {
                             chrome.tabs.reload(tab.id);
                         } catch (err) {
-                            // Ignore errors if tab can't be reloaded
+                            
                         }
                     });
                 });
@@ -2466,20 +2466,20 @@ async function checkAndHandleSessionExpiration() {
     }
 }
 
-// Set up alarm for periodic session checks - check frequently to ensure timely logout
+
 chrome.alarms.create('sessionExpirationCheck', {
-    periodInMinutes: 5 // Check every 5 minutes to ensure timely logout
+    periodInMinutes: 5 
 });
 
-// Listen for alarm and perform session check
+
 chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === 'sessionExpirationCheck') {
         checkAndHandleSessionExpiration();
     }
-    // ...existing alarm handlers...
+    
 });
 
-// Also check on startup and when installed
+
 chrome.runtime.onStartup.addListener(() => {
     checkAndHandleSessionExpiration();
 });
@@ -2488,69 +2488,69 @@ chrome.runtime.onInstalled.addListener(() => {
     checkAndHandleSessionExpiration();
 });
 
-// Check session expiration whenever extension is used
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    // Check session on various message types to ensure frequent validation
+    
     if (message.action) {
         checkAndHandleSessionExpiration();
     }
 
-    return true; // Keep the message channel open for async response
+    return true; 
 });
 
-// Also add listener for session expired actions from content scripts
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'sessionExpired') {
-        // Show notification that session has expired after 24 hours
+        
         showToast(sender.tab.id, 'Your session has expired after 24 hours. Please log in again.', true);
         sendResponse({
             success: true
         });
     }
-    return true; // Keep the message channel open for async response
+    return true; 
 });
 
-// NPTEL Integration
+
 function findAnswer(query) {
-    const normalizedQuery = normalizeText(query); // Normalize the query
-    const bestAnswers = []; // Array to store the best answers
-    let smallestDistance = Infinity; // Track the smallest distance
+    const normalizedQuery = normalizeText(query); 
+    const bestAnswers = []; 
+    let smallestDistance = Infinity; 
 
     for (const item of dataset) {
-        const normalizedQuestion = normalizeText(item.question); // Normalize the question
+        const normalizedQuestion = normalizeText(item.question); 
         const distance = levenshteinDistance(normalizedQuery, normalizedQuestion);
 
-        // If the distance is within the threshold
-        const threshold = 15; // Adjust this value based on your needs
+        
+        const threshold = 15; 
         if (distance <= threshold) {
             if (distance < smallestDistance) {
-                smallestDistance = distance; // Update smallest distance
-                bestAnswers.length = 0; // Clear previous answers
-                bestAnswers.push(item.answer); // Store the new best answer
+                smallestDistance = distance; 
+                bestAnswers.length = 0; 
+                bestAnswers.push(item.answer); 
             } else if (distance === smallestDistance) {
-                bestAnswers.push(item.answer); // Add to the list of best answers
+                bestAnswers.push(item.answer); 
             }
         }
     }
 
-    return bestAnswers.length > 0 ? bestAnswers : null; // Return the best answers or null if none found
+    return bestAnswers.length > 0 ? bestAnswers : null; 
 }
 
-// Function to calculate the Levenshtein distance
+
 function levenshteinDistance(s1, s2) {
     const dp = Array(s1.length + 1).fill(null).map(() => Array(s2.length + 1).fill(0));
 
     for (let i = 0; i <= s1.length; i++) {
         for (let j = 0; j <= s2.length; j++) {
             if (i === 0) {
-                dp[i][j] = j; // Deletions
+                dp[i][j] = j; 
             } else if (j === 0) {
-                dp[i][j] = i; // Additions
+                dp[i][j] = i; 
             } else {
                 dp[i][j] = Math.min(
-                    dp[i - 1][j] + 1, // Deletion
-                    dp[i][j - 1] + 1, // Insertion
-                    dp[i - 1][j - 1] + (s1[i - 1] === s2[j - 1] ? 0 : 1) // Substitution
+                    dp[i - 1][j] + 1, 
+                    dp[i][j - 1] + 1, 
+                    dp[i - 1][j - 1] + (s1[i - 1] === s2[j - 1] ? 0 : 1) 
                 );
             }
         }
@@ -2558,11 +2558,11 @@ function levenshteinDistance(s1, s2) {
     return dp[s1.length][s2.length];
 }
 
-// Normalization function to clean up the text
+
 function normalizeText(text) {
     return text
-        .toLowerCase() // Convert to lowercase
-        .replace(/[-]/g, ' ') // Replace dashes with spaces
+        .toLowerCase() 
+        .replace(/[-]/g, ' ') 
         .replace(/[^\w\s]/g, '') // Remove all non-word characters (except whitespace)
         .trim(); // Trim leading and trailing spaces
 }
@@ -2579,10 +2579,10 @@ async function loadNptelDataset() {
     }
 }
 
-// Load dataset on initialization
+
 loadNptelDataset();
 
-// Update showMCQToast to use the current opacity level and include info button
+
 async function showMCQToast(tabId, message, detailedInfo = '') {
     const opacity = await getToastOpacity();
     
@@ -2604,7 +2604,7 @@ async function showMCQToast(tabId, message, detailedInfo = '') {
             
             // Create toast container
             const toast = document.createElement('div');
-            toast.id = 'neopass-active-toast'; // Add ID for tracking
+            toast.id = 'neopass-active-toast'; 
             toast.style.position = 'fixed';
             toast.style.bottom = '20px';
             toast.style.left = '50%';
@@ -2623,30 +2623,30 @@ async function showMCQToast(tabId, message, detailedInfo = '') {
             toast.style.backdropFilter = 'blur(10px)';
             toast.style.WebkitBackdropFilter = 'blur(10px)';
             
-            // Create header container
+            
             const headerContainer = document.createElement('div');
             headerContainer.style.display = 'flex';
             headerContainer.style.justifyContent = 'space-between';
             headerContainer.style.alignItems = 'center';
             
-            // Create answer container with formatted answer
+            
             const answerContainer = document.createElement('div');
             answerContainer.style.display = 'flex';
             answerContainer.style.alignItems = 'center';
             answerContainer.style.flexGrow = '1';
             
             if (!isNotMCQ) {
-                // Parse the message to separate option identifier from answer text
+                
                 let optionIdentifier, optionAnswer;
                 
-                // Handle different format patterns like "A. answer", "1. answer", "A answer", "1 answer"
+                
                 const match = msg.match(/^([A-Za-z0-9]+)\.?\s+(.+)$/);
                 
                 if (match) {
                     optionIdentifier = match[1].trim();
                     optionAnswer = match[2].trim();
                 } else {
-                    // Fallback if the pattern doesn't match
+                    
                     const parts = msg.split(' ');
                     optionIdentifier = parts[0].replace('.', '');
                     optionAnswer = parts.slice(1).join(' ');
@@ -2654,9 +2654,9 @@ async function showMCQToast(tabId, message, detailedInfo = '') {
                 
                 // Determine if option is letter or number based
                 const isLetter = /^[A-Za-z]$/.test(optionIdentifier);
-                const optionColor = isLetter ? '#4285f4' : '#f4b400'; // Blue for letters, Yellow/Gold for numbers
+                const optionColor = isLetter ? '#4285f4' : '#f4b400'; 
                 
-                // Option indicator dot
+                
                 const optionDot = document.createElement('div');
                 optionDot.style.width = '22px';
                 optionDot.style.height = '22px';
@@ -2672,7 +2672,7 @@ async function showMCQToast(tabId, message, detailedInfo = '') {
                 optionDot.style.boxShadow = `0 2px 4px ${optionColor}66`;
                 optionDot.textContent = optionIdentifier.toUpperCase();
                 
-                // Answer text
+                
                 const answerText = document.createElement('span');
                 answerText.textContent = optionAnswer;
                 answerText.style.fontSize = '14px';
@@ -2681,7 +2681,7 @@ async function showMCQToast(tabId, message, detailedInfo = '') {
                 answerContainer.appendChild(optionDot);
                 answerContainer.appendChild(answerText);
             } else {
-                // For "Not an MCQ" response - no icon, just show the text
+                
                 const messageText = document.createElement('span');
                 messageText.textContent = msg;
                 messageText.style.fontSize = '14px';
@@ -2690,13 +2690,13 @@ async function showMCQToast(tabId, message, detailedInfo = '') {
                 answerContainer.appendChild(messageText);
             }
             
-            // Create buttons container
+            
             const buttonsContainer = document.createElement('div');
             buttonsContainer.style.display = 'flex';
             buttonsContainer.style.alignItems = 'center';
             buttonsContainer.style.marginLeft = '10px';
             
-            // Info button
+            
             const infoBtn = document.createElement('button');
             infoBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
             infoBtn.title = 'Show more information';
@@ -2710,7 +2710,7 @@ async function showMCQToast(tabId, message, detailedInfo = '') {
             infoBtn.style.lineHeight = '0';
             infoBtn.style.transition = 'all 0.2s';
             
-            // Close button
+            
             const closeBtn = document.createElement('button');
             closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
             closeBtn.title = 'Close';
@@ -2723,7 +2723,7 @@ async function showMCQToast(tabId, message, detailedInfo = '') {
             closeBtn.style.lineHeight = '0';
             closeBtn.style.transition = 'all 0.2s';
             
-            // Detailed info container (initially hidden)
+            
             const detailedInfoContainer = document.createElement('div');
             detailedInfoContainer.style.marginTop = '12px';
             detailedInfoContainer.style.padding = '10px 12px';
@@ -2739,7 +2739,7 @@ async function showMCQToast(tabId, message, detailedInfo = '') {
                 'The selected text does not appear to be a multiple-choice question. Please try selecting a valid MCQ.' : 
                 detailedInfo;
             
-            // Add event listeners
+            
             let expanded = false;
             let hideTimeoutId = null;
             
@@ -2770,14 +2770,14 @@ async function showMCQToast(tabId, message, detailedInfo = '') {
                     '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>' : 
                     '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
                 
-                // Clear the auto-hide timeout when info is expanded
+                
                 if (expanded) {
                     if (hideTimeoutId) {
                         clearTimeout(hideTimeoutId);
                         hideTimeoutId = null;
                     }
                 } else {
-                    // Restart the auto-hide timer when info is collapsed
+                    
                     hideTimeoutId = setTimeout(() => {
                         toast.style.opacity = '0';
                         toast.style.transform = 'translateY(10px) translateX(-50%)';
@@ -2787,7 +2787,7 @@ async function showMCQToast(tabId, message, detailedInfo = '') {
             };
             
             closeBtn.onclick = function() {
-                // Clear any existing timeout
+                
                 if (hideTimeoutId) {
                     clearTimeout(hideTimeoutId);
                     hideTimeoutId = null;
@@ -2798,7 +2798,7 @@ async function showMCQToast(tabId, message, detailedInfo = '') {
                 setTimeout(() => toast.remove(), 300);
             };
             
-            // Assemble the toast
+            
             buttonsContainer.appendChild(infoBtn);
             buttonsContainer.appendChild(closeBtn);
             headerContainer.appendChild(answerContainer);
@@ -2809,13 +2809,13 @@ async function showMCQToast(tabId, message, detailedInfo = '') {
             
             document.body.appendChild(toast);
             
-            // Add entrance animation
+            
             toast.style.transform = 'translateY(10px) translateX(-50%)';
             setTimeout(() => {
                 toast.style.transform = 'translateY(0) translateX(-50%)';
             }, 10);
 
-            // Set initial auto-hide timeout
+            
             hideTimeoutId = setTimeout(() => {
                 toast.style.opacity = '0';
                 toast.style.transform = 'translateY(10px) translateX(-50%)';
@@ -2826,7 +2826,7 @@ async function showMCQToast(tabId, message, detailedInfo = '') {
     });
 }
 
-// Update showNPTELToast to use the current opacity level and include info button
+
 async function showNPTELToast(tabId, message, isError = false, detailedInfo = '') {
     const opacity = await getToastOpacity();
     
@@ -2839,7 +2839,7 @@ async function showNPTELToast(tabId, message, isError = false, detailedInfo = ''
         }
     }
 
-    // Remove any existing toast first
+    
     await removeExistingToast(tabId);
 
     chrome.scripting.executeScript({
@@ -2847,9 +2847,9 @@ async function showNPTELToast(tabId, message, isError = false, detailedInfo = ''
             tabId: tabId
         },
         func: function(msg, isError, opacity, detailedInfo) {
-            // Create toast container
+            
             const toast = document.createElement('div');
-            toast.id = 'neopass-active-toast'; // Add ID for tracking
+            toast.id = 'neopass-active-toast'; 
             toast.style.position = 'fixed';
             toast.style.bottom = '20px';
             toast.style.left = '50%';
@@ -2884,18 +2884,18 @@ async function showNPTELToast(tabId, message, isError = false, detailedInfo = ''
                 toast.style.WebkitBackdropFilter = 'blur(10px)';
             }
             
-            // Create header container
+            
             const headerContainer = document.createElement('div');
             headerContainer.style.display = 'flex';
             headerContainer.style.justifyContent = 'space-between';
             headerContainer.style.alignItems = 'flex-start';
             
-            // Create message container
+            
             const messageContainer = document.createElement('div');
             messageContainer.style.flexGrow = '1';
             messageContainer.style.marginRight = '12px';
             
-            // Add indicator dot
+            
             const indicatorDot = document.createElement('span');
             indicatorDot.style.display = 'inline-block';
             indicatorDot.style.width = '8px';
@@ -2905,15 +2905,15 @@ async function showNPTELToast(tabId, message, isError = false, detailedInfo = ''
             indicatorDot.style.marginRight = '8px';
             indicatorDot.style.boxShadow = isError ? '0 0 4px rgba(255, 107, 107, 0.6)' : '0 0 4px rgba(74, 222, 128, 0.6)';
             
-            // Add message text
+            
             const messageText = document.createElement('span');
-            messageText.innerHTML = msg.replace(/\n/g, '<br>'); // Use innerHTML to handle newlines
+            messageText.innerHTML = msg.replace(/\n/g, '<br>'); 
             messageText.style.fontSize = '14px';
             messageText.style.fontWeight = '500';
             messageText.style.lineHeight = '1.4';
             messageText.style.wordBreak = 'break-word';
             
-            // Combine dot and text
+            
             const messageContent = document.createElement('div');
             messageContent.style.display = 'flex';
             messageContent.style.alignItems = 'center';
@@ -2922,13 +2922,13 @@ async function showNPTELToast(tabId, message, isError = false, detailedInfo = ''
             
             messageContainer.appendChild(messageContent);
             
-            // Create buttons container
+            
             const buttonsContainer = document.createElement('div');
             buttonsContainer.style.display = 'flex';
             buttonsContainer.style.alignItems = 'center';
             buttonsContainer.style.marginLeft = '8px';
             
-            // Info button
+            
             const infoBtn = document.createElement('button');
             infoBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
             infoBtn.title = 'Show more information';
@@ -2942,7 +2942,7 @@ async function showNPTELToast(tabId, message, isError = false, detailedInfo = ''
             infoBtn.style.lineHeight = '0';
             infoBtn.style.transition = 'all 0.2s';
             
-            // Close button
+            
             const closeBtn = document.createElement('button');
             closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
             closeBtn.title = 'Close';
@@ -2955,7 +2955,7 @@ async function showNPTELToast(tabId, message, isError = false, detailedInfo = ''
             closeBtn.style.lineHeight = '0';
             closeBtn.style.transition = 'all 0.2s';
 
-            // Detailed info container (initially hidden)
+            
             const detailedInfoContainer = document.createElement('div');
             detailedInfoContainer.style.marginTop = '12px';
             detailedInfoContainer.style.padding = '10px 12px';
@@ -2969,7 +2969,7 @@ async function showNPTELToast(tabId, message, isError = false, detailedInfo = ''
             detailedInfoContainer.style.color = isError ? 'rgba(255, 107, 107, 0.9)' : 'rgba(255, 255, 255, 0.9)';
             detailedInfoContainer.textContent = detailedInfo;
 
-            // Add event listeners
+            
             let expanded = false;
             let hideTimeoutId = null;
             
@@ -3000,14 +3000,14 @@ async function showNPTELToast(tabId, message, isError = false, detailedInfo = ''
                     '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>' : 
                     '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
                 
-                // Clear the auto-hide timeout when info is expanded
+                
                 if (expanded) {
                     if (hideTimeoutId) {
                         clearTimeout(hideTimeoutId);
                         hideTimeoutId = null;
                     }
                 } else {
-                    // Restart the auto-hide timer when info is collapsed
+                    
                     hideTimeoutId = setTimeout(() => {
                         toast.style.opacity = '0';
                         toast.style.transform = 'translateY(10px) translateX(-50%)';
@@ -3017,7 +3017,7 @@ async function showNPTELToast(tabId, message, isError = false, detailedInfo = ''
             };
             
             closeBtn.onclick = function() {
-                // Clear any existing timeout
+                
                 if (hideTimeoutId) {
                     clearTimeout(hideTimeoutId);
                     hideTimeoutId = null;
@@ -3028,7 +3028,7 @@ async function showNPTELToast(tabId, message, isError = false, detailedInfo = ''
                 setTimeout(() => toast.remove(), 300);
             };
 
-            // Assemble the toast
+            
             buttonsContainer.appendChild(infoBtn);
             buttonsContainer.appendChild(closeBtn);
             headerContainer.appendChild(messageContainer);
@@ -3039,13 +3039,13 @@ async function showNPTELToast(tabId, message, isError = false, detailedInfo = ''
             
             document.body.appendChild(toast);
 
-            // Add entrance animation
+            
             toast.style.transform = 'translateY(10px) translateX(-50%)';
             setTimeout(() => {
                 toast.style.transform = 'translateY(0) translateX(-50%)';
             }, 10);
 
-            // Set initial auto-hide timeout
+            
             hideTimeoutId = setTimeout(() => {
                 toast.style.opacity = '0';
                 toast.style.transform = 'translateY(10px) translateX(-50%)';
@@ -3055,11 +3055,11 @@ async function showNPTELToast(tabId, message, isError = false, detailedInfo = ''
         args: [message, isError, opacity, detailedInfo]
     });
 }
-// Show a spinner toast while AI query is being processed
+
 async function showSpinnerToast(tabId, message = 'Processing your request...') {
     const opacity = await getToastOpacity();
     
-    // Remove any existing toast first
+    
     await removeExistingToast(tabId);
 
     chrome.scripting.executeScript({
@@ -3067,7 +3067,7 @@ async function showSpinnerToast(tabId, message = 'Processing your request...') {
             tabId: tabId
         },
         func: function(msg, opacity) {
-            // Create toast container
+            
             const toast = document.createElement('div');
             toast.id = 'neopass-spinner-toast';
             toast.style.position = 'fixed';
@@ -3088,20 +3088,20 @@ async function showSpinnerToast(tabId, message = 'Processing your request...') {
             toast.style.backdropFilter = 'blur(10px)';
             toast.style.WebkitBackdropFilter = 'blur(10px)';
             
-            // Create header container
+            
             const headerContainer = document.createElement('div');
             headerContainer.style.display = 'flex';
             headerContainer.style.justifyContent = 'space-between';
             headerContainer.style.alignItems = 'center';
             
-            // Create message container with spinner
+            
             const messageContainer = document.createElement('div');
             messageContainer.style.display = 'flex';
             messageContainer.style.alignItems = 'center';
             messageContainer.style.gap = '10px';
             messageContainer.style.flexGrow = '1';
             
-            // Spinner indicator (pulsing dot)
+            
             const spinnerDot = document.createElement('span');
             spinnerDot.style.display = 'inline-block';
             spinnerDot.style.width = '8px';
@@ -3111,7 +3111,7 @@ async function showSpinnerToast(tabId, message = 'Processing your request...') {
             spinnerDot.style.boxShadow = '0 0 4px rgba(100, 181, 246, 0.6)';
             spinnerDot.style.animation = 'pulse 1.5s ease-in-out infinite';
             
-            // Message text
+            
             const messageText = document.createElement('span');
             messageText.textContent = msg;
             messageText.style.fontSize = '14px';
@@ -3122,7 +3122,7 @@ async function showSpinnerToast(tabId, message = 'Processing your request...') {
             messageContainer.appendChild(spinnerDot);
             messageContainer.appendChild(messageText);
             
-            // Close button
+            
             const closeBtn = document.createElement('button');
             closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
             closeBtn.title = 'Close';
@@ -3136,7 +3136,7 @@ async function showSpinnerToast(tabId, message = 'Processing your request...') {
             closeBtn.style.lineHeight = '0';
             closeBtn.style.transition = 'all 0.2s';
             
-            // Add CSS animation keyframes
+            
             const style = document.createElement('style');
             style.textContent = `
                 @keyframes pulse {
@@ -3152,7 +3152,7 @@ async function showSpinnerToast(tabId, message = 'Processing your request...') {
             `;
             document.head.appendChild(style);
             
-            // Event listeners
+            
             closeBtn.onmouseover = function() {
                 closeBtn.style.color = '#ffffff';
                 closeBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
@@ -3169,14 +3169,14 @@ async function showSpinnerToast(tabId, message = 'Processing your request...') {
                 setTimeout(() => toast.remove(), 300);
             };
             
-            // Assemble and append
+            
             headerContainer.appendChild(messageContainer);
             headerContainer.appendChild(closeBtn);
             toast.appendChild(headerContainer);
             
             document.body.appendChild(toast);
             
-            // Add entrance animation
+            
             toast.style.transform = 'translateY(10px) translateX(-50%)';
             setTimeout(() => {
                 toast.style.transform = 'translateY(0) translateX(-50%)';

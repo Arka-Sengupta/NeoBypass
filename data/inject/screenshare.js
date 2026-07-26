@@ -1,11 +1,11 @@
-// Mac detection - only declare if not already declared
+
 let isMac;
 if (typeof isMac === 'undefined') {
     isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0 || 
             navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
 }
 
-// Lists of events to intercept
+
 const windowEvents = [
     "blur", 
     "focus", 
@@ -27,43 +27,43 @@ const documentEvents = [
     "webkitvisibilitychange"
 ];
 
-// Store original property descriptors for restoration
+
 const originalVisibilityState = Object.getOwnPropertyDescriptor(document, 'visibilityState');
 const originalWebkitVisibilityState = Object.getOwnPropertyDescriptor(document, "webkitVisibilityState");
 const originalHidden = Object.getOwnPropertyDescriptor(document, "hidden");
 
-// Event handler to prevent default behavior
+
 const eventHandler = (event) => {
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
 };
 
-// Main function to bypass browser restrictions
+
 function bypassRestrictions() {
-    // Aggressively block beforeunload popup
+    
     const blockBeforeUnload = (e) => {
         e.stopPropagation();
         e.stopImmediatePropagation();
         delete e['returnValue'];
     };
     
-    // Add our handler with highest priority (capture phase)
+    
     window.addEventListener('beforeunload', blockBeforeUnload, true);
     
-    // Override addEventListener to block beforeunload handlers
+    
     const originalAddEventListener = EventTarget.prototype.addEventListener;
     EventTarget.prototype.addEventListener = function(type, listener, options) {
         if (type === 'beforeunload') {
-            return; // Completely ignore beforeunload listeners
+            return; 
         }
         return originalAddEventListener.call(this, type, listener, options);
     };
     
-    // Override onbeforeunload property setter
+    
     Object.defineProperty(window, 'onbeforeunload', {
         set: function(val) {
-            // Silently ignore attempts to set onbeforeunload
+            
         },
         get: function() {
             return null;
@@ -71,20 +71,20 @@ function bypassRestrictions() {
         configurable: false
     });
     
-    // Prevent window events from firing
+    
     windowEvents.forEach(eventName => {
-        // Skip unload and beforeunload events
+        
         if (eventName !== 'unload' && eventName !== 'beforeunload') {
             window.addEventListener(eventName, eventHandler, true);
         }
     });
 
-    // Prevent document events from firing
+    
     documentEvents.forEach(eventName => {
         document.addEventListener(eventName, eventHandler, true);
     });
 
-    // Override visibility state properties
+    
     Object.defineProperty(document, "visibilityState", {
         get: () => "visible",
         configurable: true
@@ -322,11 +322,11 @@ function showPopup(resolve, reject, constraints, originalGetDisplayMedia) {
     const proceedWrap = root.querySelector('.np-proceed-wrap');
 
     function showAuthWall() {
-        // Feature unlocked: Auth wall hidden
+        
     }
 
     async function requirePro(action) {
-        action(); // Unlocked
+        action(); 
     }
 
     const closeBtn = root.querySelector('.np-close');
@@ -493,6 +493,6 @@ function showPopup(resolve, reject, constraints, originalGetDisplayMedia) {
     });
 }
 
-// Initialize bypasses and observer
+
 bypassRestrictions();
 spoofScreenRecording();

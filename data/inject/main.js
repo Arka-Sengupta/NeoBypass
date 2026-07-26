@@ -1,5 +1,5 @@
 (function() {
-  /* port is used to communicate between chrome and page scripts */
+  
   var port;
   try {
     port = document.getElementById('lwys-ctv-port');
@@ -17,7 +17,7 @@
     e.stopImmediatePropagation();
   };
 
-  /* visibility */
+  
   Object.defineProperty(document, 'visibilityState', {
     get() {
       if (port.dataset.enabled === 'false') {
@@ -66,14 +66,14 @@
     }
   }, true);
 
-  /* pointercapture */
+  
   window.addEventListener('lostpointercapture', e => {
     if (port.dataset.enabled === 'true' && port.dataset.pointercapture !== 'false') {
       block(e);
     }
   }, true);
 
-  /* hidden */
+  
   Object.defineProperty(document, 'hidden', {
     get() {
       if (port.dataset.enabled === 'false') {
@@ -91,7 +91,7 @@
     }
   });
 
-  /* focus */
+  
   Document.prototype.hasFocus = new Proxy(Document.prototype.hasFocus, {
     apply(target, self, args) {
       if (port.dataset.enabled === 'true' && port.dataset.focus !== 'false') {
@@ -115,7 +115,7 @@
   document.addEventListener('focus', onfocus, true);
   window.addEventListener('focus', onfocus, true);
 
-  /* blur */
+  
   const onblur = e => {
     if (port.dataset.enabled === 'true' && port.dataset.blur !== 'false') {
       if (e.target === document || e.target === window) {
@@ -126,7 +126,7 @@
   document.addEventListener('blur', onblur, true);
   window.addEventListener('blur', onblur, true);
 
-  /* mouse */
+  
   window.addEventListener('mouseleave', e => {
     if (port.dataset.enabled === 'true' && port.dataset.mouseleave !== 'false') {
       if (e.target === document || e.target === window) {
@@ -135,7 +135,7 @@
     }
   }, true);
 
-  /* requestAnimationFrame */
+  
   let lastTime = 0;
   window.requestAnimationFrame = new Proxy(window.requestAnimationFrame, {
     apply(target, self, args) {

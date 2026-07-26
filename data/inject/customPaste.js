@@ -18,7 +18,7 @@ async function performPasteByTyping() {
         let clipText = '';
         let clipboardSource = 'none';
         
-        // First, try native clipboard (prioritize external app copies)
+        
         try {
             clipText = await navigator.clipboard.readText();
             clipboardSource = 'native';
@@ -27,7 +27,7 @@ async function performPasteByTyping() {
             console.log('[PasteByTyping] Native clipboard read failed:', clipErr.message);
         }
         
-        // If empty, fall back to our custom clipboard storage
+        
         if (!clipText && window.neoPassClipboard) {
             clipText = window.neoPassClipboard;
             clipboardSource = 'neoPassClipboard';
@@ -42,7 +42,7 @@ async function performPasteByTyping() {
         
         console.log('[PasteByTyping] Typing from', clipboardSource, '- Length:', clipText.length);
 
-        // Normalize line endings and filter out tab characters
+        
         const textToType = clipText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\t/g, '');
         
         window.isPasteByTypingActive = true;
@@ -57,7 +57,7 @@ async function performPasteByTyping() {
         document.addEventListener('keydown', stopTypingHandler);
 
         try {
-            // Simulate typing character by character with realistic delays
+            
             for (let i = 0; i < textToType.length; i++) {
                 if (!window.isPasteByTypingActive) {
                     break;
@@ -65,7 +65,7 @@ async function performPasteByTyping() {
                 
                 const char = textToType[i];
             
-            // Insert character at current cursor position
+            
             if (activeElement.isContentEditable) {
                 const selection = window.getSelection();
                 if (selection.rangeCount > 0) {
@@ -94,19 +94,19 @@ async function performPasteByTyping() {
                 data: char
             }));
             
-            // Random delay between 50-200ms for each letter (realistic typing speed)
-            const letterDelay = Math.random() * 150 + 50; // Random between 50-200ms
+            
+            const letterDelay = Math.random() * 150 + 50; 
             await new Promise(resolve => setTimeout(resolve, letterDelay));
             
-            // Add extra delay after space (end of word)
+            
             if (char === ' ') {
-                const wordDelay = Math.random() * 500 + 300; // Random between 300-800ms
+                const wordDelay = Math.random() * 500 + 300; 
                 await new Promise(resolve => setTimeout(resolve, wordDelay));
             }
             
-            // Add extra delay after sentence-ending punctuation
+            
             if (char === '.' || char === '!' || char === '?') {
-                const sentenceDelay = Math.random() * 500 + 500; // Random between 500-1000ms
+                const sentenceDelay = Math.random() * 500 + 500; 
                 await new Promise(resolve => setTimeout(resolve, sentenceDelay));
             }
         }
@@ -115,7 +115,7 @@ async function performPasteByTyping() {
             document.removeEventListener('keydown', stopTypingHandler);
         }
 
-        // Dispatch change event after all typing is complete
+        
         activeElement.dispatchEvent(new Event('change', { bubbles: true }));
         console.log('[PasteByTyping] Typing complete');
 
@@ -144,7 +144,7 @@ async function performDragDropPaste() {
         let clipText = '';
         let clipboardSource = 'none';
         
-        // First, try native clipboard (prioritize external app copies)
+        
         try {
             clipText = await navigator.clipboard.readText();
             clipboardSource = 'native';
@@ -153,7 +153,7 @@ async function performDragDropPaste() {
             console.log('[DragDropPaste] Native clipboard read failed:', clipErr.message);
         }
         
-        // If empty, fall back to our custom clipboard storage
+        
         if (!clipText && window.neoPassClipboard) {
             clipText = window.neoPassClipboard;
             clipboardSource = 'neoPassClipboard';
@@ -168,10 +168,10 @@ async function performDragDropPaste() {
         
         console.log('[DragDropPaste] Pasting from', clipboardSource, '- Length:', clipText.length);
 
-        // Normalize line endings
+        
         clipText = clipText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-        // Store initial value to check if drop worked
+        
         const initialValue = activeElement.value || activeElement.textContent || activeElement.innerHTML || '';
         const initialLength = initialValue.length;
 
@@ -189,7 +189,7 @@ async function performDragDropPaste() {
             getData: dataTransfer.getData('text/plain').substring(0, 30)
         });
 
-        // Get the position where to drop (cursor position or center of element)
+        
         let clientX, clientY;
         
         if (activeElement.isContentEditable) {
@@ -210,7 +210,7 @@ async function performDragDropPaste() {
             clientY = rect.top + rect.height / 2;
         }
 
-        // Create and dispatch dragenter event
+        
         const dragenterEvent = new DragEvent('dragenter', {
             bubbles: true,
             cancelable: true,
@@ -225,7 +225,7 @@ async function performDragDropPaste() {
         
         activeElement.dispatchEvent(dragenterEvent);
 
-        // Create and dispatch dragover event
+        
         const dragoverEvent = new DragEvent('dragover', {
             bubbles: true,
             cancelable: true,
@@ -240,7 +240,7 @@ async function performDragDropPaste() {
         
         activeElement.dispatchEvent(dragoverEvent);
 
-        // Create and dispatch the drop event
+        
         const dropEvent = new DragEvent('drop', {
             bubbles: true,
             cancelable: true,
@@ -255,10 +255,10 @@ async function performDragDropPaste() {
 
         const dropResult = activeElement.dispatchEvent(dropEvent);
 
-        // Give a small delay for the drop to be processed
+        
         await new Promise(resolve => setTimeout(resolve, 150));
         
-        // Check if the drop event actually worked by checking exact length change
+        
         const finalValue = activeElement.value || activeElement.textContent || activeElement.innerHTML || '';
         const finalLength = finalValue.length;
         const expectedLength = initialLength + clipText.length;
@@ -310,24 +310,24 @@ async function performDragDropPaste() {
     }
 }
 
-// Override drag and drop events to enable pasting via drag-drop
+
 (function() {
-    // Enable drag and drop paste by preventing default blocking
+    
     ['dragenter', 'dragover', 'drop'].forEach(eventName => {
         document.addEventListener(eventName, function(event) {
-            // Allow drag and drop for input elements
+            
             const target = event.target;
             if (target && (target.isContentEditable || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
                 event.stopPropagation();
-                // Don't prevent default for 'drop' - let it pass through
+                
                 if (eventName !== 'drop') {
                     event.preventDefault();
                 }
             }
-        }, true); // Capture phase to intercept before website's handlers
+        }, true); 
     });
 
-    // Also enable paste events
+    
     document.addEventListener('paste', function(event) {
         const target = event.target;
         if (target && (target.isContentEditable || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
@@ -338,16 +338,16 @@ async function performDragDropPaste() {
     console.log('[CustomPaste] Drag-drop and paste events enabled');
 })();
 
-// Handle both Ctrl+V/Cmd+V (standard paste) and Alt+Shift+V/Option+Shift+V (drag-drop paste)
+
 document.addEventListener('keydown', async function(event) {
     const altKey = event.altKey;
-    const ctrlKey = event.ctrlKey || event.metaKey; // Support both Ctrl (Windows/Linux) and Cmd (macOS)
+    const ctrlKey = event.ctrlKey || event.metaKey; 
     
-    // Ctrl+V / Cmd+V (standard default paste behavior)
+    
     if (ctrlKey && !event.shiftKey && !event.altKey && (event.key === 'V' || event.key === 'v')) {
         const activeElement = document.activeElement;
         
-        // Only handle paste for input elements
+        
         if (activeElement && (activeElement.isContentEditable || activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
             event.preventDefault();
             event.stopPropagation();
@@ -364,17 +364,17 @@ document.addEventListener('keydown', async function(event) {
                     console.log('[Paste] Native clipboard read failed:', err.message);
                 }
                 
-                // If empty, fall back to neoPassClipboard
+                
                 if (!clipText && window.neoPassClipboard) {
                     clipText = window.neoPassClipboard;
                     console.log('[Paste] Using neoPassClipboard');
                 }
                 
                 if (clipText) {
-                    // Normalize line endings
+                    
                     clipText = clipText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
                     
-                    // Store initial value to check if paste worked
+                    
                     const initialValue = activeElement.value || activeElement.textContent || activeElement.innerHTML || '';
                     const initialLength = initialValue.length;
                     
@@ -413,7 +413,7 @@ document.addEventListener('keydown', async function(event) {
                         activeElement.dispatchEvent(new Event('change', { bubbles: true }));
                     }
                     
-                    // Check if paste actually worked by verifying content changed
+                    
                     await new Promise(resolve => setTimeout(resolve, 50));
                     const finalValue = activeElement.value || activeElement.textContent || activeElement.innerHTML || '';
                     const finalLength = finalValue.length;
@@ -428,13 +428,13 @@ document.addEventListener('keydown', async function(event) {
                 }
             } catch (err) {
                 console.error('[Paste] Error:', err);
-                // If error occurs, try typing method as fallback
+                
                 console.log('[Paste] Error occurred, falling back to typing method');
                 await performPasteByTyping();
             }
         }
     }
-    // Alt+Shift+V (Option+Shift+V on macOS) triggers drag-drop paste
+    
     else if (altKey && event.shiftKey && (event.key === 'V' || event.key === 'v')) {
         event.preventDefault();
         event.stopPropagation();

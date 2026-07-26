@@ -1,7 +1,7 @@
 (function () {
 	"use strict";
 
-	// Create an invisible textarea for our controlled copy operations
+	
 	const invisibleTextarea = document.createElement("textarea");
 	invisibleTextarea.id = "neopass-invisible-copy";
 	invisibleTextarea.style.position = "fixed";
@@ -17,7 +17,7 @@
 	invisibleTextarea.style.overflow = "hidden";
 	document.body.appendChild(invisibleTextarea);
 
-	// Store the last copied text in a global variable for paste operations
+	
 	window.neoPassClipboard = "";
 
 	// REMOVED: Flag to track when we're performing a custom copy operation
@@ -50,21 +50,21 @@
 		return Promise.resolve();
 	};
 
-	// Keep a reference to the native document.execCommand implementation.
-	// Do not override it: callers expect native selection-based copy behavior and a synchronous boolean return value.
+	
+	
 	const originalExecCommand = document.execCommand;
 
-	// Function to perform custom copy operation
+	
 	async function customCopy(selectedText) {
 		if (!selectedText) return false;
 
 		try {
-			// REMOVED: Set flag to prevent blocking our own copy
+			
 
-			// Store in our global clipboard variable
+			
 			window.neoPassClipboard = selectedText;
 
-			// Try to write to native clipboard first
+			
 			try {
 				await originalWriteText.call(navigator.clipboard, selectedText);
 				console.log("[CopyOverride] Wrote to native clipboard via writeText");
@@ -86,7 +86,7 @@
 				"Stored in neoPassClipboard",
 			);
 
-			// Clear the textarea
+			
 			invisibleTextarea.value = "";
 			invisibleTextarea.blur();
 
@@ -133,7 +133,7 @@
 	// Keep fallback clipboard state in sync for browser-native copy operations
 	document.addEventListener("copy", syncNeoPassClipboard(), true);
 
-	// Handle context menu copy
+	
 	document.addEventListener(
 		"contextmenu",
 		function (event) {
@@ -142,7 +142,7 @@
 		true,
 	);
 
-	// Log clipboard status for debugging
+	
 	window.getNeoPassClipboard = function () {
 		console.log(
 			"[CopyOverride] Current neoPassClipboard:",

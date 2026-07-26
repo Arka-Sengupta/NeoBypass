@@ -2,9 +2,7 @@
     const Proxy = window.Proxy;
     const Object = window.Object;
     const Array = window.Array;
-    /**
-     * Save original methods before we override them
-     */
+    
     const Originals = {
         createElement: document.createElement,
         log: console.log,
@@ -17,9 +15,7 @@
         addEventListener: window.addEventListener
     }
 
-    /**
-     * Cutoffs for logging. After cutoff is reached, will no longer log anti debug warnings.
-     */
+    
     const cutoffs = {
         table: {
             amount: 5,
@@ -43,49 +39,47 @@
         }
     }
 
-    /**
-     * Decides if anti debug warnings should be logged
-     */
+    
     function shouldLog(type) {
 
             return false;
     }
 
     window.console.log = wrapFn((...args) => {
-        // Keep track of redacted arguments
+        
         let redactedCount = 0;
 
-        // Filter arguments for detectors
+        
         const newArgs = args.map((a) => {
 
-            // Don't print functions.
+            
             if (typeof a === 'function') {
                 redactedCount++;
                 return "Redacted Function";
             }
 
-            // Passthrough if primitive
+            
             if (typeof a !== 'object' || a === null) return a;
 
-            // For objects, scan properties
+            
             var props = Object.getOwnPropertyDescriptors(a)
             for (var name in props) {
 
-                // Redact custom getters
+                
                 if (props[name].get !== undefined) {
                     redactedCount++;
                     return "Redacted Getter";
                 }
 
-                // Also block toString overrides
+                
                 if (name === 'toString') {
                     redactedCount++;
                     return "Redacted Str";
                 }
             }
 
-            // Defeat Performance Detector
-            // https://github.com/theajack/disable-devtool/blob/master/src/detector/sub-detector/performance.ts
+            
+            
             if (Array.isArray(a) && a.length === 50 && typeof a[0] === "object") {
                 redactedCount++;
                 return "Redacted LargeObjArray";
@@ -94,7 +88,7 @@
             return a;
         });
 
-        // If most arguments are redacted, its probably spam
+        
         if (redactedCount >= Math.max(args.length - 1, 1)) {
             if (!shouldLog("redactedLog")) {
                 return;
@@ -118,7 +112,7 @@
         const originalFn = Originals.functionConstructor.apply(this, args);
         var fnContent = args[0];
         if (fnContent) {
-            if (fnContent.includes('debugger')) { // An anti-debugger is attempting to stop debugging
+            if (fnContent.includes('debugger')) { 
                 if (shouldLog("debugger")) {
                 }
                 debugCount++;

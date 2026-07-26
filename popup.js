@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const uninstallButton = document.getElementById('uninstallButton');
     const closeButton = document.getElementById('closeButton');
     
-    // Gemini Config Elements
+    
     const geminiApiKeyInput = document.getElementById('geminiApiKey');
     const geminiModelNameInput = document.getElementById('geminiModelName');
     const saveConfigButton = document.getElementById('saveConfigButton');
@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }, duration);
     }
 
-    // Load Gemini configuration
+    
     function loadGeminiConfig() {
         chrome.storage.local.get(['customAPIKey', 'customModelName'], function(result) {
             if (geminiApiKeyInput && result.customAPIKey) {
@@ -46,12 +46,12 @@ document.addEventListener('DOMContentLoaded', function () {
             if (geminiModelNameInput && result.customModelName) {
                 geminiModelNameInput.value = result.customModelName;
             } else if (geminiModelNameInput) {
-                geminiModelNameInput.value = 'gemini-2.5-flash'; // default
+                geminiModelNameInput.value = 'gemini-2.5-flash'; 
             }
         });
     }
 
-    // Save Gemini configuration
+    
     if (saveConfigButton) {
         saveConfigButton.addEventListener('click', () => {
             const apiKey = geminiApiKeyInput.value.trim();
